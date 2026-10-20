@@ -39,3 +39,6 @@ Thumbs.db
 
 # Ollama models
 .ollama/
+
+# Start script runtime data
+.run/
