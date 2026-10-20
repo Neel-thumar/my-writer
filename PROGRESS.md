@@ -73,27 +73,17 @@
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Search across titles and content | 🔄 Partial — title search works in API; full-text content search needed |
-| Tags UI in sidebar | 🬜 Not started — API exists, frontend UI needed |
-| Sorting (updated, title, word count) | ✅ API supports it; frontend needs sort dropdown |
-| Recent list on home screen | 🬜 Not started |
+| Search across titles and content | ✅ API now searches both title and content via ILIKE |
+| Tags UI in sidebar | ✅ TagsPanel component — create, assign, remove tags per document |
+| Sorting (updated, title, word count) | ✅ Sort dropdown in sidebar; API already supported it |
+| Recent list on home screen | ✅ RecentDocuments component on home screen (top 8 by updated) |
 | Focus mode | ✅ Working (Ctrl+Shift+F) |
 | Dark mode | ✅ Working (toggle button) |
 | Keyboard shortcuts | ✅ Working (Ctrl+Shift+F, Ctrl+K, Ctrl+Enter, Alt+↓) |
 | Word count display | ✅ Working (status bar) |
-| Personal dictionary | 🬜 Not started — no API or UI |
-| Check categories (spelling, grammar, punctuation, style toggles) | 🬜 Not started — API exists but no UI toggles |
-| Version history view with restore | 🬜 Not started — API exists, frontend UI needed |
-
-### Phase 2 Next Steps
-
-1. Version history view (API ready, needs frontend modal/panel)
-2. Tags UI in sidebar (API ready, needs frontend)
-3. Full-text search (API needs content search, frontend needs search bar)
-4. Sort dropdown in sidebar
-5. Recent documents list on home screen
-6. Personal dictionary (new API + storage + UI)
-7. Check category toggles (settings API + UI)
+| Personal dictionary | ✅ DictionaryWord model, API routes, settings modal UI, checker integration |
+| Check categories (spelling, grammar, punctuation, style toggles) | ✅ Settings modal with toggles; categories passed to check API |
+| Version history view with restore | ✅ VersionHistoryModal with restore |
 
 ---
 

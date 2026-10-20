@@ -7,12 +7,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased] — Phase 2 in progress
 
-### Added
-- `PLAN.md` — full original design plan
-- `PROGRESS.md` — project progress tracker
-- `CHANGELOG.md` — this file
-- Per-folder `README.md` documentation files
-- `.gitignore` for the repository
+### Added — Phase 2
+
+#### Backend
+- Full-text search: documents API now searches content (ILIKE) in addition to titles
+- Personal dictionary: `DictionaryWord` model, `/api/dictionary` CRUD routes
+- Dictionary integration: grammar checker filters spelling suggestions for dictionary words
+- Migration v2: creates `dictionary_words` table
+- Dictionary schemas added to Pydantic
+
+#### Frontend
+- Version history modal: `VersionHistoryModal.tsx` — list snapshots, restore any version
+- Tags panel: `TagsPanel.tsx` — create, assign, remove tags per document
+- Sort dropdown: sort documents by last edited, title (A–Z), or word count
+- Recent documents: `RecentDocuments.tsx` — home screen shows top 8 recently edited docs
+- Settings modal: `SettingsModal.tsx` — check category toggles + personal dictionary UI
+- Check categories: enabled categories passed to grammar check API
+- API client: dictionary methods (list, add, delete words)
+- Types: `DictionaryWord` type added
 
 ### Infrastructure
 - Docker Engine 29.9.1 installed on the system
