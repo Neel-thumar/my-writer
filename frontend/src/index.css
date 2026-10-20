@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base typography for the editor */
+.ProseMirror {
+  @apply font-serif text-ink-700 leading-[1.7];
+  min-height: 60vh;
+}
+
+.ProseMirror:focus {
+  outline: none;
+}
+
+.ProseMirror p {
+  @apply mb-4;
+}
+
+.ProseMirror h1 {
+  @apply text-2xl font-semibold mt-8 mb-4;
+}
+
+.ProseMirror h2 {
+  @apply text-xl font-semibold mt-6 mb-3;
+}
+
+.ProseMirror h3 {
+  @apply text-lg font-semibold mt-4 mb-2;
+}
+
+.ProseMirror ul {
+  @apply list-disc pl-6 mb-4;
+}
+
+.ProseMirror ol {
+  @apply list-decimal pl-6 mb-4;
+}
+
+.ProseMirror blockquote {
+  @apply border-l-4 border-ink-200 pl-4 italic text-ink-400 mb-4;
+}
+
+.ProseMirror code {
+  @apply font-mono text-sm bg-ink-100 px-1 py-0.5 rounded;
+}
+
+.ProseMirror pre {
+  @apply font-mono text-sm bg-ink-100 p-4 rounded-lg overflow-x-auto mb-4;
+}
+
+.ProseMirror hr {
+  @apply border-ink-200 my-6;
+}
+
+/* Dark mode */
+.dark .ProseMirror {
+  @apply text-ink-200;
+}
+
+.dark .ProseMirror h1,
+.dark .ProseMirror h2,
+.dark .ProseMirror h3 {
+  @apply text-ink-50;
+}
+
+.dark .ProseMirror blockquote {
+  @apply border-ink-700 text-ink-400;
+}
+
+.dark .ProseMirror code {
+  @apply bg-ink-800;
+}
+
+.dark .ProseMirror pre {
+  @apply bg-ink-800;
+}
+
+/* Suggestion underline styles */
+.suggestion-underline {
+  background-image: linear-gradient(transparent 95%, currentColor 95%);
+  background-position: 0 100%;
+  background-repeat: repeat-x;
+  background-size: 6px 3px;
+  cursor: pointer;
+  padding-bottom: 1px;
+}
+
+.suggestion-underline.spelling {
+  color: theme("colors.suggestion.spelling");
+}
+
+.suggestion-underline.grammar {
+  color: theme("colors.suggestion.grammar");
+}
+
+.suggestion-underline.punctuation {
+  color: theme("colors.suggestion.punctuation");
+}
+
+.suggestion-underline.style {
+  color: theme("colors.suggestion.style");
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-ink-200 rounded-full;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  @apply bg-ink-700;
+}
+
+/* Smooth transitions for focus mode */
+.focus-mode .library-sidebar {
+  @apply -translate-x-full opacity-0;
+}
