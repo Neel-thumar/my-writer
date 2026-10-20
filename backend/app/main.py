@@ -42,6 +42,7 @@ def create_app() -> FastAPI:
     from app.api.routes_export import router as export_router
     from app.api.routes_tags import router as tags_router
     from app.api.routes_settings import router as settings_router
+    from app.api.routes_dictionary import router as dictionary_router
 
     api_prefix = "/api"
     app.include_router(documents_router, prefix=api_prefix)
@@ -50,6 +51,7 @@ def create_app() -> FastAPI:
     app.include_router(export_router, prefix=api_prefix)
     app.include_router(tags_router, prefix=api_prefix)
     app.include_router(settings_router, prefix=api_prefix)
+    app.include_router(dictionary_router, prefix=api_prefix)
 
     @app.on_event("startup")
     def _startup() -> None:

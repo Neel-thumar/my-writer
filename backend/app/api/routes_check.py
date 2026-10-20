@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.api.schemas import CheckRequest, CheckResponse
 from app.checkers.languagetool import LanguageToolChecker
 from app.storage.database import get_db
-from app.storage.models import Setting
+from app.storage.models import DictionaryWord, Setting
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,23 @@ def check_text(payload: CheckRequest, db: Session = Depends(get_db)):
             language=payload.language,
             categories=payload.categories,
         )
+
+        # Filter out spelling suggestions for words in the personal dictionary
+        if suggestions:
+            dict_words = {
+                w.word.lower()
+                for w in db.query(DictionaryWord).all()
+            }
+            if dict_words:
+                suggestions = [
+                    s
+                    for s in suggestions
+                    if not (
+                        s.type == "spelling"
+                        and s.context.strip().lower() in dict_words
+                    )
+                ]
+
         return CheckResponse(suggestions=suggestions, language=payload.language)
     except Exception as exc:
         logger.error("Grammar check failed: %s", exc)

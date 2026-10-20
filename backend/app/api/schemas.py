@@ -158,3 +158,18 @@ class SettingOut(BaseModel):
 
     key: str
     value: str
+
+
+# ---------------------------------------------------------------------------
+# Dictionary schemas
+# ---------------------------------------------------------------------------
+
+class DictionaryWordCreate(BaseModel):
+    word: str
+
+
+class DictionaryWordOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    word: str

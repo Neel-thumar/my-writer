@@ -31,7 +31,12 @@ def list_documents(
     if folder_id is not None:
         q = q.filter(Document.folder_id == folder_id)
     if search:
-        q = q.filter(Document.title.ilike(f"%{search}%"))
+        q = q.filter(
+            or_(
+                Document.title.ilike(f"%{search}%"),
+                Document.content.ilike(f"%{search}%"),
+            )
+        )
     if sort == "title":
         q = q.order_by(Document.title.asc())
     elif sort == "word_count":

@@ -6,6 +6,7 @@
 import type {
   CheckResponse,
   Document,
+  DictionaryWord,
   Folder,
   Setting,
   Suggestion,
@@ -226,5 +227,21 @@ export const api = {
 
   async deleteSetting(key: string): Promise<void> {
     await fetchJSON<void>(`${BASE}/settings/${key}`, { method: "DELETE" });
+  },
+
+  // Personal Dictionary
+  async listDictionaryWords(): Promise<DictionaryWord[]> {
+    return fetchJSON<DictionaryWord[]>(`${BASE}/dictionary`);
+  },
+
+  async addDictionaryWord(word: string): Promise<DictionaryWord> {
+    return fetchJSON<DictionaryWord>(`${BASE}/dictionary`, {
+      method: "POST",
+      body: JSON.stringify({ word }),
+    });
+  },
+
+  async deleteDictionaryWord(id: number): Promise<void> {
+    await fetchJSON<void>(`${BASE}/dictionary/${id}`, { method: "DELETE" });
   },
 };

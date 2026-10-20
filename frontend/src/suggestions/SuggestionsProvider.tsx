@@ -13,7 +13,7 @@ interface SuggestionsContextValue {
   suggestions: Suggestion[];
   checking: boolean;
   /** Run a grammar check on the given plain text */
-  checkText: (text: string) => Promise<void>;
+  checkText: (text: string, categories?: string[]) => Promise<void>;
   /** Clear all suggestions */
   clear: () => void;
   /** Accept a suggestion — replaces text (handled by editor) */
@@ -38,14 +38,14 @@ export function SuggestionsProvider({ children }: { children: ReactNode }) {
   >(null);
   const checkTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const checkText = useCallback(async (text: string) => {
+  const checkText = useCallback(async (text: string, categories?: string[]) => {
     if (!text || !text.trim()) {
       setSuggestions([]);
       return;
     }
     setChecking(true);
     try {
-      const resp = await api.checkText(text, "en-US");
+      const resp = await api.checkText(text, "en-US", categories);
       setSuggestions(resp.suggestions);
     } catch (err) {
       // If LanguageTool is not running, silently clear suggestions

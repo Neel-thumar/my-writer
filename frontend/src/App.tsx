@@ -10,6 +10,10 @@ import { useDebouncedCallback } from "./hooks/useDebouncedCallback";
 import { useKeyboardShortcut } from "./hooks/useKeyboardShortcut";
 import { api } from "./api/client";
 import type { Document, Suggestion as SuggestionType } from "./types";
+import { VersionHistoryModal } from "./library/VersionHistoryModal";
+import { TagsPanel } from "./library/TagsPanel";
+import { RecentDocuments } from "./library/RecentDocuments";
+import { SettingsModal } from "./library/SettingsModal";
 
 function Workspace() {
   const { theme, toggleTheme } = useTheme();
@@ -21,6 +25,14 @@ function Workspace() {
   const [sidebarKey, setSidebarKey] = useState(0);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [checkCategories, setCheckCategories] = useState<Record<string, boolean>>({
+    spelling: true,
+    grammar: true,
+    punctuation: true,
+    style: true,
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Create the editor
@@ -81,14 +93,18 @@ function Workspace() {
       if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current);
       checkTimeoutRef.current = setTimeout(() => {
         const text = editor.getText();
-        checkText(text);
+        // Only send enabled categories
+        const enabledCats = Object.entries(checkCategories)
+          .filter(([, enabled]) => enabled)
+          .map(([cat]) => cat);
+        checkText(text, enabledCats);
       }, 600);
     });
 
     return () => {
       if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current);
     };
-  }, [editor, selectedDoc, checkText]);
+  }, [editor, selectedDoc, checkText, checkCategories]);
 
   // Apply suggestion underlines — Phase 1 uses a decoration-free approach
   // (The suggestions are listed in a panel, and clicking opens the popup)
@@ -262,10 +278,27 @@ function Workspace() {
               >
                 ⬇ Export
               </button>
+              <button
+                onClick={() => setShowVersionHistory(true)}
+                className="px-2 py-1 text-xs rounded text-ink-500 hover:text-ink-700 dark:hover:text-ink-300"
+                title="Version history"
+              >
+                📋 History
+              </button>
+              <button
+                onClick={() => setShowSettings(true)}
+                className="px-2 py-1 text-xs rounded text-ink-500 hover:text-ink-700 dark:hover:text-ink-300"
+                title="Settings"
+              >
+                ⚙ Settings
+              </button>
             </div>
 
             {/* Toolbar */}
             {!focusMode && <EditorToolbar editor={editor} />}
+
+            {/* Tags */}
+            {!focusMode && <TagsPanel docId={selectedDoc.id} onTagsChanged={() => setSidebarKey((k) => k + 1)} />}
 
             {/* Editor */}
             <div className="flex-1 overflow-y-auto">
@@ -300,19 +333,34 @@ function Workspace() {
             <SuggestionPopup suggestion={activeSuggestion} anchorRect={anchorRect} />
           </>
         ) : (
-          /* No document selected */
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <h2 className="text-2xl font-serif text-ink-400 mb-2">Your Writing Workspace</h2>
-              <p className="text-sm text-ink-400 mb-6">Select a document or create a new one to begin.</p>
-              <button
-                onClick={() => handleCreateDocument(null)}
-                className="px-4 py-2 rounded-lg bg-ink-200 dark:bg-ink-700 text-ink-700 dark:text-ink-200 hover:bg-ink-300 dark:hover:bg-ink-600"
-              >
-                ✍️ New Document
-              </button>
-            </div>
-          </div>
+          /* No document selected — show recent documents */
+          <RecentDocuments
+            onOpenDocument={handleSelectDocument}
+            onNewDocument={() => handleCreateDocument(null)}
+          />
+        )}
+
+        {/* Modals */}
+        {showVersionHistory && selectedDoc && (
+          <VersionHistoryModal
+            docId={selectedDoc.id}
+            onClose={() => setShowVersionHistory(false)}
+            onRestore={async () => {
+              // Reload the document after restore
+              const updated = await api.getDocument(selectedDoc.id);
+              setSelectedDoc(updated);
+              setSidebarKey((k) => k + 1);
+            }}
+          />
+        )}
+        {showSettings && (
+          <SettingsModal
+            onClose={() => setShowSettings(false)}
+            checkCategories={checkCategories}
+            onToggleCategory={(cat, enabled) =>
+              setCheckCategories((prev) => ({ ...prev, [cat]: enabled }))
+            }
+          />
         )}
       </div>
     </div>

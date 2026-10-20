@@ -25,11 +25,12 @@ export function LibrarySidebar({
   const [showTrash, setShowTrash] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set());
   const [activeFolder, setActiveFolder] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<"updated" | "title" | "word_count">("updated");
 
   const loadData = useCallback(async () => {
     const [folderList, docList, trashDocList, trashFolderList] = await Promise.all([
       api.listFolders(),
-      api.listDocuments({ sort: "updated" }),
+      api.listDocuments({ sort: sortBy }),
       api.listDocuments({ include_deleted: true }),
       api.listFolders(true),
     ]);
@@ -37,7 +38,7 @@ export function LibrarySidebar({
     setDocuments(docList);
     setTrashDocs(trashDocList.filter((d) => d.deleted_at !== null));
     setTrashFolders(trashFolderList.filter((f) => f.deleted_at !== null));
-  }, []);
+  }, [sortBy]);
 
   useEffect(() => {
     loadData();
@@ -143,7 +144,7 @@ export function LibrarySidebar({
       </div>
 
       {/* Search */}
-      <div className="px-4 pb-2">
+      <div className="px-4 pb-2 space-y-2">
         <input
           type="text"
           value={search}
@@ -151,6 +152,18 @@ export function LibrarySidebar({
           placeholder="Search documents…"
           className="w-full px-3 py-1.5 text-sm rounded-md bg-ink-100 dark:bg-ink-800 text-ink-700 dark:text-ink-200 placeholder-ink-400 focus:outline-none focus:ring-1 focus:ring-ink-300"
         />
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-ink-400">Sort:</span>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as "updated" | "title" | "word_count")}
+            className="text-xs px-1.5 py-1 rounded bg-ink-100 dark:bg-ink-800 text-ink-700 dark:text-ink-200 focus:outline-none"
+          >
+            <option value="updated">Last edited</option>
+            <option value="title">Title (A–Z)</option>
+            <option value="word_count">Word count</option>
+          </select>
+        </div>
       </div>
 
       {/* Navigation: All / Trash */}

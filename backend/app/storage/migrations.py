@@ -14,14 +14,11 @@ from app.storage.models import Base
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def run_migrations() -> None:
-    """Run any pending database migrations.
-
-    Phase 1: simply ensure all tables exist.
-    """
+    """Run any pending database migrations."""
     logger.info("Running migrations (schema version %s)…", SCHEMA_VERSION)
     init_db()
     logger.info("Migrations complete.")

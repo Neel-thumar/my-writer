@@ -169,6 +169,16 @@ class Setting(Base):
     value = Column(Text, nullable=False, default="")
 
 
+class DictionaryWord(Base):
+    """A word the user has accepted as correct — never flagged by grammar check."""
+
+    __tablename__ = "dictionary_words"
+
+    id = Column(Integer, primary_key=True)
+    word = Column(String(255), nullable=False, unique=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

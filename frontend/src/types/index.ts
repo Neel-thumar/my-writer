@@ -53,3 +53,8 @@ export interface Setting {
   key: string;
   value: string;
 }
+
+export interface DictionaryWord {
+  id: number;
+  word: string;
+}
