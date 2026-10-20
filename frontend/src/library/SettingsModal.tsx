@@ -11,6 +11,10 @@ interface SettingsModalProps {
   onClose: () => void;
   checkCategories: Record<string, boolean>;
   onToggleCategory: (cat: string, enabled: boolean) => void;
+  aiSuggestionsEnabled: boolean;
+  onToggleAiSuggestions: (enabled: boolean) => void;
+  backupPath: string;
+  onSetBackupPath: (path: string) => void;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -31,9 +35,16 @@ export function SettingsModal({
   onClose,
   checkCategories,
   onToggleCategory,
+  aiSuggestionsEnabled,
+  onToggleAiSuggestions,
+  backupPath,
+  onSetBackupPath,
 }: SettingsModalProps) {
   const [words, setWords] = useState<DictionaryWord[]>([]);
   const [newWord, setNewWord] = useState("");
+  const [backupInput, setBackupInput] = useState(backupPath);
+  const [backupStatus, setBackupStatus] = useState<"idle" | "backing-up" | "done" | "error">("idle");
+  const [backupResult, setBackupResult] = useState<string | null>(null);
 
   const loadWords = useCallback(async () => {
     try {
@@ -124,6 +135,28 @@ export function SettingsModal({
             </div>
           </div>
 
+          {/* AI Style Suggestions */}
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-400 mb-3">
+              AI Style Suggestions
+            </h3>
+            <p className="text-xs text-ink-400 mb-3">
+              Uses the local AI model to suggest improvements for clarity, wordiness,
+              and tone. Runs alongside grammar checks.
+            </p>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={aiSuggestionsEnabled}
+                onChange={(e) => onToggleAiSuggestions(e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-sm font-medium text-purple-500">
+                Enable AI style analysis
+              </span>
+            </label>
+          </div>
+
           {/* Personal dictionary */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-400 mb-3">
@@ -173,6 +206,67 @@ export function SettingsModal({
                 </span>
               ))}
             </div>
+          </div>
+
+          {/* Folder Backup */}
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-400 mb-3">
+              Folder Backup
+            </h3>
+            <p className="text-xs text-ink-400 mb-3">
+              Export all documents as .docx files into a local folder. A timestamped
+              subfolder is created for each backup.
+            </p>
+
+            {/* Backup path input */}
+            <div className="flex items-center gap-2 mb-3">
+              <input
+                type="text"
+                value={backupInput}
+                onChange={(e) => setBackupInput(e.target.value)}
+                placeholder="/home/user/backups/my-writer"
+                className="flex-1 px-3 py-1.5 text-sm rounded bg-ink-100 dark:bg-ink-800 text-ink-700 dark:text-ink-200 focus:outline-none focus:ring-1 focus:ring-ink-300"
+              />
+              <button
+                onClick={() => onSetBackupPath(backupInput)}
+                className="px-3 py-1.5 text-sm rounded bg-ink-200 dark:bg-ink-700 text-ink-700 dark:text-ink-200 hover:bg-ink-300 dark:hover:bg-ink-600"
+              >
+                Save Path
+              </button>
+            </div>
+
+            {/* Backup button */}
+            <button
+              onClick={async () => {
+                if (!backupInput.trim()) return;
+                setBackupStatus("backing-up");
+                setBackupResult(null);
+                try {
+                  onSetBackupPath(backupInput);
+                  const result = await api.backupAll(backupInput);
+                  setBackupStatus("done");
+                  setBackupResult(
+                    `Exported ${result.exported} document${result.exported !== 1 ? "s" : ""}${result.skipped > 0 ? `, ${result.skipped} skipped` : ""} → ${result.backup_dir}`,
+                  );
+                } catch (err) {
+                  setBackupStatus("error");
+                  setBackupResult((err as Error).message || "Backup failed");
+                }
+              }}
+              disabled={!backupInput.trim() || backupStatus === "backing-up"}
+              className="px-3 py-1.5 text-sm rounded bg-ink-700 text-white hover:bg-ink-600 dark:bg-ink-600 dark:hover:bg-ink-500 disabled:opacity-50"
+            >
+              {backupStatus === "backing-up" ? "Backing up…" : "Backup Now"}
+            </button>
+
+            {/* Status */}
+            {backupResult && (
+              <p
+                className={`mt-2 text-xs ${backupStatus === "error" ? "text-red-500" : "text-green-500"}`}
+              >
+                {backupResult}
+              </p>
+            )}
           </div>
         </div>
       </div>

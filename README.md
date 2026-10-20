@@ -7,7 +7,10 @@ A self-hosted writing environment with a clean editor, grammar checks, document 
 - **Document Library** — organize writing in folders, search across all documents, soft-delete with trash
 - **Clean Editor** — TipTap-based distraction-free editor with autosave, word count, and focus mode
 - **Grammar Checks** — LanguageTool integration with soft underlines; accept or ignore each suggestion
+- **AI Rewrite** — Rewrite selected text in 6 tones (simple, formal, friendly, concise, academic, creative) with diff view, using a local LLM
+- **AI Style Suggestions** — Optional AI-powered style analysis for clarity, wordiness, and tone (toggle in Settings)
 - **Export & Import** — export any document to .docx; import existing .docx files into the library
+- **Folder Backup** — export all documents as .docx files into a local folder (timestamped, preserves structure)
 - **Dark Mode** — easy on the eyes, toggle with one click
 - **Version History** — automatic snapshots when you save, with restore
 - **Keyboard Shortcuts** — Ctrl+Shift+F (focus mode), Ctrl+K (search), Ctrl+Enter (accept suggestion)
@@ -137,6 +140,10 @@ my-writer/
 | POST | `/api/tags` | Create a tag |
 | PUT | `/api/tags/documents/{doc_id}` | Set tags for a document |
 | POST | `/api/check` | Run grammar check |
+| POST | `/api/analyze` | AI style analysis (local LLM) |
+| POST | `/api/backup` | Backup all documents as .docx to a folder |
+| GET | `/api/backup/path` | Get configured backup folder path |
+| PUT | `/api/backup/path` | Set backup folder path |
 | GET | `/api/export/{doc_id}` | Export document as .docx |
 | POST | `/api/export/import` | Import .docx as new document |
 | GET | `/api/settings` | List settings |

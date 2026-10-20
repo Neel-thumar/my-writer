@@ -14,10 +14,11 @@ import { VersionHistoryModal } from "./library/VersionHistoryModal";
 import { TagsPanel } from "./library/TagsPanel";
 import { RecentDocuments } from "./library/RecentDocuments";
 import { SettingsModal } from "./library/SettingsModal";
+import { RewriteModal } from "./suggestions/RewriteModal";
 
 function Workspace() {
   const { theme, toggleTheme } = useTheme();
-  const { suggestions, checking, checkText, clear, setAcceptHandler, acceptSuggestion, activeSuggestion, setActiveSuggestion } = useSuggestions();
+  const { suggestions, checking, checkAll, clear, setAcceptHandler, acceptSuggestion, activeSuggestion, setActiveSuggestion } = useSuggestions();
 
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
@@ -27,12 +28,17 @@ function Workspace() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showRewrite, setShowRewrite] = useState(false);
+  const [rewriteText, setRewriteText] = useState("");
+  const [rewriteRange, setRewriteRange] = useState<{ from: number; to: number } | null>(null);
   const [checkCategories, setCheckCategories] = useState<Record<string, boolean>>({
     spelling: true,
     grammar: true,
     punctuation: true,
     style: true,
   });
+  const [aiSuggestionsEnabled, setAiSuggestionsEnabled] = useState(false);
+  const [backupPath, setBackupPath] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Create the editor
@@ -40,6 +46,34 @@ function Workspace() {
     setSaveStatus("saving");
     debouncedSave();
   });
+
+  /** Get the text to rewrite: selected text, or the paragraph the cursor is in. */
+  const getRewriteSelection = useCallback((): { text: string; from: number; to: number } | null => {
+    if (!editor) return null;
+    const { from, to, empty } = editor.state.selection;
+
+    if (!empty && from !== to) {
+      const text = editor.state.doc.textBetween(from, to, "\n");
+      if (text.trim()) return { text, from, to };
+    }
+
+    // No selection — use the current paragraph
+    const $from = editor.state.selection.$from;
+    const paraStart = $from.before($from.depth);
+    const paraEnd = $from.after($from.depth);
+    const paraText = editor.state.doc.textBetween(paraStart, paraEnd, "\n");
+    if (paraText.trim()) return { text: paraText, from: paraStart, to: paraEnd };
+
+    return null;
+  }, [editor]);
+
+  /** Replace a text range in the editor with new text. */
+  const applyRewrite = useCallback((range: { from: number; to: number }, newText: string) => {
+    if (!editor) return;
+    const tr = editor.state.tr;
+    tr.insertText(newText, range.from, range.to);
+    editor.view.dispatch(tr);
+  }, [editor]);
 
   // Debounced autosave
   const { debounced: debouncedSave, flush: flushSave } = useDebouncedCallback(async () => {
@@ -84,7 +118,7 @@ function Workspace() {
     });
   }, [editor, setAcceptHandler]);
 
-  // Grammar check: run when user pauses typing (debounced via editor onUpdate -> checkText)
+  // Grammar check: run when user pauses typing (debounced via editor onUpdate -> checkAll)
   const checkTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!editor || !selectedDoc) return;
@@ -97,14 +131,14 @@ function Workspace() {
         const enabledCats = Object.entries(checkCategories)
           .filter(([, enabled]) => enabled)
           .map(([cat]) => cat);
-        checkText(text, enabledCats);
+        checkAll(text, enabledCats, aiSuggestionsEnabled);
       }, 600);
     });
 
     return () => {
       if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current);
     };
-  }, [editor, selectedDoc, checkText, checkCategories]);
+  }, [editor, selectedDoc, checkAll, checkCategories, aiSuggestionsEnabled]);
 
   // Apply suggestion underlines — Phase 1 uses a decoration-free approach
   // (The suggestions are listed in a panel, and clicking opens the popup)
@@ -115,6 +149,14 @@ function Workspace() {
     // Focus search in sidebar
     const searchInput = document.querySelector('input[placeholder="Search documents…"]') as HTMLInputElement;
     searchInput?.focus();
+  });
+  useKeyboardShortcut("ctrl+r", () => {
+    const sel = getRewriteSelection();
+    if (sel) {
+      setRewriteText(sel.text);
+      setRewriteRange({ from: sel.from, to: sel.to });
+      setShowRewrite(true);
+    }
   });
 
   // Handle suggestion navigation
@@ -137,6 +179,13 @@ function Workspace() {
   // Load documents list on mount
   useEffect(() => {
     loadDocumentList();
+  }, []);
+
+  // Load backup path from settings on mount
+  useEffect(() => {
+    api.getBackupPath().then((resp) => {
+      if (resp.path) setBackupPath(resp.path);
+    }).catch(() => {});
   }, []);
 
   const loadDocumentList = async () => {
@@ -279,6 +328,20 @@ function Workspace() {
                 ⬇ Export
               </button>
               <button
+                onClick={() => {
+                  const sel = getRewriteSelection();
+                  if (sel) {
+                    setRewriteText(sel.text);
+                    setRewriteRange({ from: sel.from, to: sel.to });
+                    setShowRewrite(true);
+                  }
+                }}
+                className="px-2 py-1 text-xs rounded text-ink-500 hover:text-ink-700 dark:hover:text-ink-300"
+                title="Rewrite selected text with AI (Ctrl+R)"
+              >
+                ✨ Rewrite
+              </button>
+              <button
                 onClick={() => setShowVersionHistory(true)}
                 className="px-2 py-1 text-xs rounded text-ink-500 hover:text-ink-700 dark:hover:text-ink-300"
                 title="Version history"
@@ -320,7 +383,7 @@ function Workspace() {
                 </button>
               )}
               <span className="ml-auto">
-                Ctrl+Shift+F focus · Ctrl+K search
+                Ctrl+Shift+F focus · Ctrl+K search · Ctrl+R rewrite{aiSuggestionsEnabled ? " · AI on" : ""}
               </span>
             </div>
 
@@ -360,6 +423,27 @@ function Workspace() {
             onToggleCategory={(cat, enabled) =>
               setCheckCategories((prev) => ({ ...prev, [cat]: enabled }))
             }
+            aiSuggestionsEnabled={aiSuggestionsEnabled}
+            onToggleAiSuggestions={setAiSuggestionsEnabled}
+            backupPath={backupPath}
+            onSetBackupPath={(path) => {
+              setBackupPath(path);
+              api.setBackupPath(path).catch(console.error);
+            }}
+          />
+        )}
+        {showRewrite && (
+          <RewriteModal
+            selectedText={rewriteText}
+            onClose={() => {
+              setShowRewrite(false);
+              setRewriteRange(null);
+            }}
+            onAccept={(newText) => {
+              if (editor && rewriteRange) {
+                applyRewrite(rewriteRange, newText);
+              }
+            }}
           />
         )}
       </div>

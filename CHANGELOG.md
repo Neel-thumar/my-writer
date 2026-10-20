@@ -5,6 +5,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ---
 
+## [Unreleased] — Phase 3 in progress
+
+### Added — Phase 3
+
+#### Backend
+- AI style analysis: `POST /api/analyze` endpoint uses llama-cpp-python to identify clarity, wordiness, passive voice, and tone issues; returns suggestions in CheckResponse format
+- `analyze()` method on `OllamaRewriter` with `_parse_json_lines` helper for parsing LLM JSON-lines output
+- Folder backup: `POST /api/backup` exports all non-deleted documents as .docx into a timestamped subfolder, preserving folder structure
+- Backup path config: `GET /api/backup/path` and `PUT /api/backup/path` for reading/setting the backup folder (stored in settings table)
+- `routes_analyze.py` and `routes_backup.py` route modules registered in `main.py`
+
+#### Frontend
+- Selection-based rewrite: Rewrite now uses `editor.state.selection` to get selected text (falls back to current paragraph if no selection); on accept, replaces only that range via ProseMirror transaction instead of replacing the entire document
+- AI style suggestions: `SuggestionsProvider.checkAll()` runs grammar check and AI analysis in parallel, merging results; AI suggestions have `ai-` ID prefix for deduplication
+- Settings modal: AI Style Suggestions toggle section (enable/disable AI analysis)
+- Settings modal: Folder Backup section with path input, save button, and "Backup Now" trigger with status feedback
+- API client: `analyzeText()`, `backupAll()`, `getBackupPath()`, `setBackupPath()` methods
+- Types: `AnalyzeRequest` type added
+
+---
+
 ## [Unreleased] — Phase 2 in progress
 
 ### Added — Phase 2

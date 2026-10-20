@@ -8,6 +8,7 @@ import type {
   Document,
   DictionaryWord,
   Folder,
+  RewriteResponse,
   Setting,
   Suggestion,
   Tag,
@@ -243,5 +244,40 @@ export const api = {
 
   async deleteDictionaryWord(id: number): Promise<void> {
     await fetchJSON<void>(`${BASE}/dictionary/${id}`, { method: "DELETE" });
+  },
+
+  // Rewrite
+  async rewriteText(text: string, tone: string = "simple"): Promise<RewriteResponse> {
+    return fetchJSON<RewriteResponse>(`${BASE}/rewrite`, {
+      method: "POST",
+      body: JSON.stringify({ text, tone }),
+    });
+  },
+
+  // AI Style Analysis
+  async analyzeText(text: string): Promise<CheckResponse> {
+    return fetchJSON<CheckResponse>(`${BASE}/analyze`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    });
+  },
+
+  // Backup
+  async backupAll(folderPath: string): Promise<{ exported: number; skipped: number; backup_dir: string; timestamp: string }> {
+    return fetchJSON(`${BASE}/backup`, {
+      method: "POST",
+      body: JSON.stringify({ folder_path: folderPath }),
+    });
+  },
+
+  async getBackupPath(): Promise<{ path: string | null }> {
+    return fetchJSON(`${BASE}/backup/path`);
+  },
+
+  async setBackupPath(path: string): Promise<{ path: string }> {
+    return fetchJSON(`${BASE}/backup/path`, {
+      method: "PUT",
+      body: JSON.stringify({ path }),
+    });
   },
 };

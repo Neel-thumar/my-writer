@@ -173,3 +173,19 @@ class DictionaryWordOut(BaseModel):
 
     id: int
     word: str
+
+
+# ---------------------------------------------------------------------------
+# Rewrite schemas
+# ---------------------------------------------------------------------------
+
+class RewriteRequest(BaseModel):
+    text: str
+    tone: str = "simple"
+    model: str = "qwen2.5:0.5b"
+
+
+class RewriteResponse(BaseModel):
+    original: str
+    rewritten: str
+    tone: str

@@ -58,3 +58,13 @@ export interface DictionaryWord {
   id: number;
   word: string;
 }
+
+export interface RewriteResponse {
+  original: string;
+  rewritten: string;
+  tone: string;
+}
+
+export interface AnalyzeRequest {
+  text: string;
+}

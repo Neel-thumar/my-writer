@@ -14,6 +14,10 @@ interface SuggestionsContextValue {
   checking: boolean;
   /** Run a grammar check on the given plain text */
   checkText: (text: string, categories?: string[]) => Promise<void>;
+  /** Run AI style analysis and merge results with existing suggestions */
+  analyzeText: (text: string) => Promise<void>;
+  /** Run both grammar check and AI analysis */
+  checkAll: (text: string, categories?: string[], aiEnabled?: boolean) => Promise<void>;
   /** Clear all suggestions */
   clear: () => void;
   /** Accept a suggestion — replaces text (handled by editor) */
@@ -56,6 +60,73 @@ export function SuggestionsProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const analyzeText = useCallback(async (text: string) => {
+    if (!text || !text.trim()) return;
+    setChecking(true);
+    try {
+      const aiResp = await api.analyzeText(text);
+      // Merge AI suggestions with existing grammar suggestions (avoid dupes by id)
+      setSuggestions((prev) => {
+        const existingIds = new Set(prev.map((s) => s.id));
+        const aiOnly = aiResp.suggestions.filter((s) => !existingIds.has(s.id));
+        return [...prev, ...aiOnly];
+      });
+    } catch (err) {
+      console.warn("AI analysis failed:", err);
+    } finally {
+      setChecking(false);
+    }
+  }, []);
+
+  const checkAll = useCallback(async (text: string, categories?: string[], aiEnabled?: boolean) => {
+    if (!text || !text.trim()) {
+      setSuggestions([]);
+      return;
+    }
+    setChecking(true);
+    const tasks: Promise<void>[] = [];
+
+    // Grammar check
+    tasks.push(
+      (async () => {
+        try {
+          const resp = await api.checkText(text, "en-US", categories);
+          setSuggestions((prev) => {
+            // Remove old non-AI suggestions, keep AI ones
+            const ai = prev.filter((s) => s.id.startsWith("ai-"));
+            return [...resp.suggestions, ...ai];
+          });
+        } catch (err) {
+          console.warn("Grammar check failed:", err);
+        }
+      })(),
+    );
+
+    // AI analysis (if enabled)
+    if (aiEnabled) {
+      tasks.push(
+        (async () => {
+          try {
+            const aiResp = await api.analyzeText(text);
+            setSuggestions((prev) => {
+              // Remove old AI suggestions, keep grammar ones
+              const grammar = prev.filter((s) => !s.id.startsWith("ai-"));
+              return [...grammar, ...aiResp.suggestions];
+            });
+          } catch (err) {
+            console.warn("AI analysis failed:", err);
+          }
+        })(),
+      );
+    } else {
+      // Remove any existing AI suggestions
+      setSuggestions((prev) => prev.filter((s) => !s.id.startsWith("ai-")));
+    }
+
+    await Promise.allSettled(tasks);
+    setChecking(false);
+  }, []);
+
   const clear = useCallback(() => setSuggestions([]), []);
 
   const acceptSuggestion = useCallback(
@@ -87,6 +158,8 @@ export function SuggestionsProvider({ children }: { children: ReactNode }) {
         suggestions,
         checking,
         checkText,
+        analyzeText,
+        checkAll,
         clear,
         acceptSuggestion,
         dismissSuggestion,

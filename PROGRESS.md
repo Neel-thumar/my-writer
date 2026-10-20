@@ -87,17 +87,19 @@
 
 ---
 
-## Phase 3: Smart & Desktop — ⬜ Not started
+## Phase 3: Smart & Desktop — 🔄 In Progress
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Ollama installed | ✅ | v0.40.6 running on localhost:11434 |
-| Ollama model pulled | ✅ | qwen2.5:0.5b (lightweight) |
-| Sentence rewriting API | 🬜 Not started |
-| Diff view | 🬜 Not started |
-| Tone/style suggestions | 🬜 Not started |
-| Tauri desktop wrapper | 🬜 Not started |
-| Folder sync/backup | 🬜 Not started |
+| Local LLM runtime | ✅ llama-cpp-python installed, Qwen2.5-0.5B-Instruct GGUF model (397MB) in backend/data/ |
+| Rewrite API endpoint | ✅ POST /api/rewrite with 6 tone options (simple, formal, friendly, concise, academic, creative) |
+| Rewrite modal with diff view | ✅ RewriteModal component with word-level diff (green=added, red=removed) |
+| Tone selector | ✅ 6 tones as pill buttons in the modal |
+| Toolbar integration | ✅ ✨ Rewrite button in top bar + Ctrl+R shortcut |
+| Selection-based rewrite | ✅ Rewrite now uses selected text (or current paragraph if no selection); replaces only that range on accept |
+| AI style suggestions | ✅ POST /api/analyze endpoint using LLM; SuggestionsProvider runs grammar + AI in parallel; toggle in Settings |
+| Folder backup | ✅ POST /api/backup exports all docs as .docx into timestamped subfolder; GET/PUT /api/backup/path for config; Settings UI |
+| Tauri desktop wrapper | ⬜ Deferred (skipped per user request) |
 
 ---
 
