@@ -12,7 +12,7 @@ export function ChangeBar({ editor, source }: { editor: Editor; source: string }
   const count = getChanges(editor.state).length;
   if (count === 0) return null;
   return (
-    <div className="animate-pop absolute bottom-5 left-1/2 -translate-x-1/2 z-30 whitespace-nowrap flex items-center gap-1 pl-4 pr-1.5 py-1.5 rounded-full bg-ink-900 text-ink-50 dark:bg-ink-100 dark:text-ink-900 shadow-xl text-sm">
+    <div className="animate-pop absolute bottom-5 left-1/2 -translate-x-1/2 z-20 whitespace-nowrap flex items-center gap-1 pl-4 pr-1.5 py-1.5 rounded-full bg-ink-900 text-ink-50 dark:bg-ink-100 dark:text-ink-900 shadow-xl text-sm">
       <span className="mr-2">
         <span className="font-semibold">{count}</span> change{count === 1 ? "" : "s"}
         {source && <span className="opacity-60"> · {source}</span>}

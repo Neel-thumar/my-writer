@@ -1,6 +1,6 @@
 /** Click-to-open dropdown menu that closes on outside click or Escape. */
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 interface MenuProps {
   trigger: (open: boolean) => ReactNode;
@@ -22,6 +22,22 @@ export function Menu({ trigger, children, align = "right", width = "w-56", title
     onOpenChange?.(value);
   };
   const ref = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [dropUp, setDropUp] = useState(false);
+
+  // Open upward when there isn't room below (e.g. the last row of a list).
+  // Measured before paint, so the menu never flashes in the wrong place.
+  useLayoutEffect(() => {
+    if (!open) {
+      setDropUp(false);
+      return;
+    }
+    const trigger = ref.current?.getBoundingClientRect();
+    const panel = panelRef.current?.getBoundingClientRect();
+    if (!trigger || !panel) return;
+    const spaceBelow = window.innerHeight - trigger.bottom;
+    setDropUp(spaceBelow < panel.height + 12 && trigger.top > spaceBelow);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -52,7 +68,8 @@ export function Menu({ trigger, children, align = "right", width = "w-56", title
       </button>
       {open && (
         <div
-          className={`animate-pop absolute z-50 mt-1.5 ${width} ${align === "right" ? "right-0" : "left-0"} rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 shadow-xl p-1.5`}
+          ref={panelRef}
+          className={`animate-pop absolute z-50 ${dropUp ? "bottom-full mb-1.5" : "mt-1.5"} ${width} ${align === "right" ? "right-0" : "left-0"} rounded-xl border border-ink-200 dark:border-ink-700 bg-white dark:bg-ink-900 shadow-xl p-1.5`}
         >
           {children(() => setOpen(false))}
         </div>

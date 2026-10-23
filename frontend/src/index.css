@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Stacking order (keep in sync when adding overlays):
+ *   20  change bar inside the writing area
+ *   30  selection bubble menu (tippy)
+ *   40  editor header and its dropdown menus
+ *   50  popovers: suggestion popup, change popover, dropdown menus elsewhere
+ *   70  modals: Settings, Version history
+ *   80  toasts
+ */
+
 /* Base typography for the editor */
 html,
 body,

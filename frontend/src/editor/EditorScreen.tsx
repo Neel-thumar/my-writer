@@ -461,7 +461,9 @@ export function EditorScreen({
   return (
     <div className="flex-1 flex flex-col min-w-0 h-full">
       {/* Header */}
-      <header className="flex items-center gap-2 h-12 px-3 sm:px-4 border-b border-ink-200/70 dark:border-ink-800 bg-ink-50/80 dark:bg-ink-950/80 backdrop-blur shrink-0">
+      {/* relative z-40: backdrop-blur makes the header its own layer, so it needs a
+          z-index or its dropdowns slide under the writing area (see index.css) */}
+      <header className="relative z-40 flex items-center gap-2 h-12 px-3 sm:px-4 border-b border-ink-200/70 dark:border-ink-800 bg-ink-50/80 dark:bg-ink-950/80 backdrop-blur shrink-0">
         {(sidebarCollapsed || focusMode) && (
           <button
             type="button"
@@ -625,7 +627,8 @@ export function EditorScreen({
           {editor && (
             <BubbleMenu
               editor={editor}
-              tippyOptions={{ duration: 120, placement: "top" }}
+              // tippy defaults to z-index 9999, which would float over Settings
+              tippyOptions={{ duration: 120, placement: "top", zIndex: 30 }}
               shouldShow={({ state }) => !state.selection.empty && getChanges(state).length === 0}
             >
               <div className="flex items-center gap-0.5 p-1 rounded-xl bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-700 shadow-lg">

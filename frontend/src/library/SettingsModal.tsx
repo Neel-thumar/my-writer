@@ -48,7 +48,7 @@ export function SettingsModal(props: SettingsModalProps) {
   }, [props.onClose]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px] grid place-items-center p-4" onClick={props.onClose}>
+    <div className="fixed inset-0 z-[70] bg-black/30 backdrop-blur-[2px] grid place-items-center p-4" onClick={props.onClose}>
       <div
         className="animate-pop w-full max-w-3xl h-[min(640px,90vh)] flex flex-col sm:flex-row rounded-2xl bg-white dark:bg-ink-900 shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}

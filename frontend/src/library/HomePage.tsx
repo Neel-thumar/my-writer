@@ -245,7 +245,7 @@ export function HomePage({ route, navigate, onNewDocument, onImport }: HomePageP
             </select>
           </div>
 
-          <div className="rounded-2xl bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-800 divide-y divide-ink-100 dark:divide-ink-800 overflow-hidden">
+          <div className="rounded-2xl bg-white dark:bg-ink-900 border border-ink-200 dark:border-ink-800 divide-y divide-ink-100 dark:divide-ink-800">
             {docs.map((d) => (
               <DocRow
                 key={d.id}
@@ -327,7 +327,7 @@ function DocRow({
   const lib = useLibrary();
   const preview = docText(doc.content, 160);
   return (
-    <div onClick={onOpen} className="group flex items-center gap-4 px-5 py-3.5 hover:bg-ink-50 dark:hover:bg-ink-800/50 cursor-pointer">
+    <div onClick={onOpen} className="group flex items-center gap-4 px-5 py-3.5 first:rounded-t-2xl last:rounded-b-2xl hover:bg-ink-50 dark:hover:bg-ink-800/50 cursor-pointer">
       <DocIcon size={18} className="text-ink-300 shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
