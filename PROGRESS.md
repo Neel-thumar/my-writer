@@ -8,7 +8,7 @@
 |-------|--------|-------|
 | Phase 1: Core | ✅ Complete | All features implemented and tested |
 | Phase 2: Productivity | 🔄 In Progress | Started — see details below |
-| Phase 3: Smart & Desktop | ⬜ Not started | Ollama installed and running, prep only |
+| Phase 3: Smart & Desktop | 🔄 In progress | Layered AI (local Fix, free cloud Rewrite), new UI; desktop wrapper deferred |
 
 ---
 
@@ -89,25 +89,22 @@
 
 ## Phase 3: Smart & Desktop — 🔄 In Progress
 
+AI works in layers — local and instant by default, cloud only when explicitly asked.
+
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Local LLM runtime | ✅ llama-cpp-python installed, Qwen2.5-0.5B-Instruct GGUF model (397MB) in backend/data/ |
-| Rewrite API endpoint | ✅ POST /api/rewrite with 6 tone options (simple, formal, friendly, concise, academic, creative) |
-| Rewrite modal with diff view | ✅ RewriteModal component with word-level diff (green=added, red=removed) |
-| Tone selector | ✅ 6 tones as pill buttons in the modal |
-| Toolbar integration | ✅ ✨ Rewrite button in top bar + Ctrl+R shortcut |
-| Selection-based rewrite | ✅ Rewrite now uses selected text (or current paragraph if no selection); replaces only that range on accept |
-| AI style suggestions | ✅ POST /api/analyze endpoint using LLM; SuggestionsProvider runs grammar + AI in parallel; toggle in Settings |
-| Folder backup | ✅ POST /api/backup exports all docs as .docx into timestamped subfolder; GET/PUT /api/backup/path for config; Settings UI |
-| Tauri desktop wrapper | ⬜ Deferred (skipped per user request) |
-| AI Correct (3 versions) | ✅ POST /api/analyze/correct + AiCorrectModal (Ctrl+Shift+C) — pick Standard / Polished / Concise |
-| Auto-correct mode | ✅ Toggle; auto-applies spelling/punctuation fixes, never on the word under the cursor |
-| In-text suggestion underlines | ✅ Wavy underlines per type, follow edits, click to open; Esc/click-away just closes |
-| Ignore suggestions | ✅ ✕ / Ignore / Ignore all — ignored issues don't come back on re-check (stored in localStorage); "Reset ignored suggestions" in Settings |
-| Autosave vs. version history | ✅ Autosave never snapshots; Ctrl+S snapshots the saved content (identical snapshots skipped) |
-| Reopen last doc on restart | ✅ Fixed: editor was left empty on startup (and could autosave over the doc) |
-
----
+| Live grammar check | ✅ | LanguageTool (local Docker); wavy underlines that follow edits, click to fix; ~0.3 s |
+| Review panel | ✅ | Resizable right panel: issues, one-click replacements, Fix all typos, Ignore / Ignore all (remembered; reset in Settings) |
+| Auto-correct mode | ✅ | Opt-in; fixes obvious typos on pause, never the word being typed or names; Undo from the notice |
+| One-click Fix (Ctrl+E) | ✅ | Local: LanguageTool fixes (skips names/dictionary words) → inline changes; ~0.3 s |
+| Deeper local grammar | ✅ | Optional Qwen2.5-0.5B pass (off by default: adds seconds, rarely helps); thread lock fixes the llama.cpp crash |
+| Inline tracked changes | ✅ | Fix/Rewrite results shown in place; accept/reject one (click) or all (Tab / Esc); reject restores exact formatting |
+| Rewrite (Ctrl+Shift+E) | ✅ | Free cloud provider with the user's own key (Groq / Gemini / OpenRouter / custom OpenAI-compatible); tones + custom instruction |
+| Home page | ✅ | Continue writing, folder cards, searchable/sortable document list with previews, move/duplicate/trash menu |
+| Navigation | ✅ | URL-hash routes (Back/refresh work), resizable/collapsible sidebar, Trash page with Undo |
+| Autosave / versions | ✅ | Autosave never snapshots; Ctrl+S snapshots the saved content (duplicates skipped) |
+| Folder backup | ✅ | Export all docs as .docx into a timestamped folder |
+| Tauri desktop wrapper | ⬜ | Deferred (skipped per user request) |
 
 ## Infrastructure Setup Log
 

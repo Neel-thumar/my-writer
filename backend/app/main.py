@@ -43,8 +43,7 @@ def create_app() -> FastAPI:
     from app.api.routes_tags import router as tags_router
     from app.api.routes_settings import router as settings_router
     from app.api.routes_dictionary import router as dictionary_router
-    from app.api.routes_rewrite import router as rewrite_router
-    from app.api.routes_analyze import router as analyze_router
+    from app.api.routes_ai import preload_local_model_if_enabled, router as ai_router
     from app.api.routes_backup import router as backup_router
 
     api_prefix = "/api"
@@ -55,14 +54,14 @@ def create_app() -> FastAPI:
     app.include_router(tags_router, prefix=api_prefix)
     app.include_router(settings_router, prefix=api_prefix)
     app.include_router(dictionary_router, prefix=api_prefix)
-    app.include_router(rewrite_router, prefix=api_prefix)
-    app.include_router(analyze_router, prefix=api_prefix)
+    app.include_router(ai_router, prefix=api_prefix)
     app.include_router(backup_router, prefix=api_prefix)
 
     @app.on_event("startup")
     def _startup() -> None:
         logger.info("Starting up — running migrations…")
         run_migrations()
+        preload_local_model_if_enabled()
         logger.info("Ready.")
 
     @app.get("/")

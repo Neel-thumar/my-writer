@@ -28,6 +28,18 @@ _CATEGORY_MAP: dict[str, str] = {
 }
 
 
+def utf16_to_index(text: str, utf16_offset: int) -> int:
+    """Convert a UTF-16 offset (what LanguageTool and JavaScript use) to a Python str index."""
+    if text.isascii():
+        return utf16_offset
+    units = 0
+    for i, ch in enumerate(text):
+        if units >= utf16_offset:
+            return i
+        units += 2 if ord(ch) > 0xFFFF else 1
+    return len(text)
+
+
 class LanguageToolChecker:
     """Adapter for the LanguageTool HTTP API.
 
@@ -100,7 +112,10 @@ class LanguageToolChecker:
 
             offset = match.get("offset", 0)
             length = match.get("length", match.get("errorLength", 0))
-            error_text = text[offset : offset + length] if 0 <= offset and offset + length <= len(text) else ""
+            # offset/length stay in UTF-16 units for the editor; slice with Python indices
+            start = utf16_to_index(text, offset)
+            end = utf16_to_index(text, offset + length)
+            error_text = text[start:end] if 0 <= start <= end <= len(text) else ""
 
             suggestion = Suggestion(
                 id=f"lt-{i}",

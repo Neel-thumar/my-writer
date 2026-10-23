@@ -15,11 +15,10 @@ interface SuggestionsContextValue {
   suggestions: Suggestion[];
   checking: boolean;
   /**
-   * Run grammar check (and optionally AI analysis) on plain text.
-   * Grammar results show immediately; AI results merge in when ready.
-   * Resolves with the grammar suggestions, or null if a newer check superseded this one.
+   * Run the local grammar check on plain text.
+   * Resolves with the suggestions, or null if a newer check superseded this one.
    */
-  checkAll: (text: string, categories?: string[], aiEnabled?: boolean) => Promise<Suggestion[] | null>;
+  checkAll: (text: string, categories?: string[]) => Promise<Suggestion[] | null>;
   /** Drop all suggestions without ignoring them (e.g. when switching documents) */
   clear: () => void;
   /** Ignore every current suggestion — they won't come back on the next check */
@@ -91,7 +90,7 @@ export function SuggestionsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const checkAll = useCallback(
-    async (text: string, categories?: string[], aiEnabled?: boolean): Promise<Suggestion[] | null> => {
+    async (text: string, categories?: string[]): Promise<Suggestion[] | null> => {
       const seq = ++checkSeqRef.current;
       const isLatest = () => seq === checkSeqRef.current;
       // Prefix ids with the check number so ids never collide across checks
@@ -116,20 +115,7 @@ export function SuggestionsProvider({ children }: { children: ReactNode }) {
       if (!isLatest()) return null;
       setSuggestions(grammar);
       setActiveSuggestion((cur) => (cur && grammar.some((s) => s.id === cur.id) ? cur : null));
-
-      if (aiEnabled) {
-        api
-          .analyzeText(text)
-          .then((resp) => {
-            if (isLatest()) setSuggestions((prev) => [...prev, ...prepare(resp.suggestions)]);
-          })
-          .catch((err) => console.warn("AI analysis failed:", err))
-          .finally(() => {
-            if (isLatest()) setChecking(false);
-          });
-      } else {
-        setChecking(false);
-      }
+      setChecking(false);
       return grammar;
     },
     [],

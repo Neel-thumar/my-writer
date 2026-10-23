@@ -1,32 +1,16 @@
 # Library
 
-The sidebar component showing folders, documents, trash, and search.
+Home, folders, Trash, sidebar and settings.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `LibrarySidebar.tsx` | Folder tree, document list, trash view, search input, create/import buttons |
+| `LibraryProvider.tsx` | Shared folders/documents/trash state + actions (trash with Undo, move, duplicate…) |
+| `Sidebar.tsx` | Resizable, collapsible navigation: search, folder tree, documents, Trash, theme, Settings |
+| `HomePage.tsx` | Home (continue writing, folders, all documents), folder pages and Trash |
+| `SettingsModal.tsx` | Writing checks, AI (local Fix + free cloud Rewrite), dictionary, backup |
+| `TagsPanel.tsx` | Tag chips under the document title |
+| `VersionHistoryModal.tsx` | Versions saved with Ctrl+S; restore any of them |
 
-## Features (Phase 1)
-
-- Folder tree with expand/collapse
-- Document list filtered by selected folder
-- Search input (filters by title)
-- Trash section showing deleted documents and folders
-- Restore from trash
-- Create new document button
-- Import .docx button
-- Document selection callback to main app
-
-## Phase 2 additions needed
-
-- Tags display and filtering
-- Sort dropdown (updated, title, word count)
-- Recent documents section
-- Full-text search (currently title-only)
-
-## Latest updates
-
-- Phase 1: folder tree, document list, trash, search all working
-- Phase 2: tags UI, sort dropdown, recent list needed
+Routes are in the URL hash (`#/`, `#/folder/3`, `#/trash`, `#/doc/12`) — see `hooks/useHashRoute.ts`.

@@ -132,17 +132,6 @@ class CheckResponse(BaseModel):
     language: str
 
 
-class CorrectVersion(BaseModel):
-    title: str
-    description: str
-    text: str
-
-
-class CorrectResponse(BaseModel):
-    original: str
-    versions: list[CorrectVersion]
-
-
 # ---------------------------------------------------------------------------
 # Export / import schemas
 # ---------------------------------------------------------------------------

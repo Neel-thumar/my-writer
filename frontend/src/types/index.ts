@@ -63,20 +63,28 @@ export interface DictionaryWord {
 export interface RewriteResponse {
   original: string;
   rewritten: string;
-  tone: string;
 }
 
-export interface AnalyzeRequest {
-  text: string;
-}
-
-export interface CorrectVersion {
-  title: string;
-  description: string;
-  text: string;
-}
-
-export interface CorrectResponse {
+export interface FixResponse {
   original: string;
-  versions: CorrectVersion[];
+  fixed: string;
+  languagetool_fixes: number;
+  local_ai_fixes: number;
+}
+
+export interface AiProvider {
+  label: string;
+  base_url: string;
+  signup: string;
+}
+
+export interface AiConfig {
+  provider: string;
+  base_url: string;
+  model: string;
+  has_api_key: boolean;
+  local_fix_ai: boolean;
+  local_model_available: boolean;
+  providers: Record<string, AiProvider>;
+  tones: Record<string, string>;
 }

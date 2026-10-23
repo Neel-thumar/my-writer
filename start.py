@@ -35,6 +35,10 @@ BACKEND_DIR = PROJECT_ROOT / "backend"
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
 PID_DIR = PROJECT_ROOT / ".run"
 PID_FILE = PID_DIR / "pids.json"
+# Services log to files: a pipe would die with this script, and the next
+# write (e.g. while loading the AI model) would crash the service.
+BACKEND_LOG = PID_DIR / "backend.log"
+FRONTEND_LOG = PID_DIR / "frontend.log"
 
 LANGUAGETOOL_IMAGE = "erikvl87/languagetool:latest"
 LANGUAGETOOL_CONTAINER = "my-writer-languagetool"
@@ -247,7 +251,7 @@ def start() -> None:
     # -----------------------------------------------------------------------
     log("\n[2/3] Starting Backend (uvicorn)…", YELLOW)
 
-    # Check if port 8000 is already in use
+    PID_DIR.mkdir(parents=True, exist_ok=True)
     backend_proc = subprocess.Popen(
         [
             sys.executable, "-m", "uvicorn",
@@ -256,7 +260,7 @@ def start() -> None:
             "--port", "8000",
         ],
         cwd=str(BACKEND_DIR),
-        stdout=subprocess.PIPE,
+        stdout=open(BACKEND_LOG, "w"),
         stderr=subprocess.STDOUT,
         start_new_session=True,  # new process group for clean kill
     )
@@ -268,10 +272,9 @@ def start() -> None:
     else:
         log("  ✗ Backend failed to start", RED)
         # Print last few lines of output
-        if backend_proc.stdout:
-            output = backend_proc.stdout.read()
-            if output:
-                log("  Output:\n" + output.decode()[-500:], RED)
+        output = BACKEND_LOG.read_text(errors="replace")
+        if output:
+            log("  Output:\n" + output[-500:], RED)
 
     # -----------------------------------------------------------------------
     # 3. Frontend (Vite dev server)
@@ -297,7 +300,7 @@ def start() -> None:
     frontend_proc = subprocess.Popen(
         [npm_bin, "run", "dev"],
         cwd=str(FRONTEND_DIR),
-        stdout=subprocess.PIPE,
+        stdout=open(FRONTEND_LOG, "w"),
         stderr=subprocess.STDOUT,
         start_new_session=True,
     )
@@ -321,6 +324,7 @@ def start() -> None:
     log("\n  App:        http://localhost:5173", GREEN + BOLD)
     log("  API docs:    http://localhost:8000/docs", GREEN)
     log("  Grammar:     http://localhost:8081", GREEN)
+    log(f"  Logs:        {BACKEND_LOG.relative_to(PROJECT_ROOT)}, {FRONTEND_LOG.relative_to(PROJECT_ROOT)}", GREEN)
     log(f"\n  To stop:     python3 start.py -e\n", YELLOW)
 
 

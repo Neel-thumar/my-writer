@@ -4,10 +4,11 @@
  */
 
 import type {
+  AiConfig,
   CheckResponse,
-  CorrectResponse,
   Document,
   DictionaryWord,
+  FixResponse,
   Folder,
   RewriteResponse,
   Setting,
@@ -15,6 +16,16 @@ import type {
   Tag,
   Version,
 } from "../types";
+
+/** An API failure with the server's human-readable message. */
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
 
 const BASE = "/api";
 
@@ -27,8 +38,15 @@ async function fetchJSON<T>(
     ...options,
   });
   if (!resp.ok) {
-    const detail = await resp.text().catch(() => "Request failed");
-    throw new Error(`${resp.status}: ${detail}`);
+    const body = await resp.text().catch(() => "");
+    let message = body || `Request failed (${resp.status})`;
+    try {
+      const detail = JSON.parse(body).detail;
+      if (typeof detail === "string") message = detail;
+    } catch {
+      // not JSON — keep the raw text
+    }
+    throw new ApiError(resp.status, message);
   }
   if (resp.status === 204) return undefined as T;
   return resp.json() as Promise<T>;
@@ -264,28 +282,41 @@ export const api = {
     await fetchJSON<void>(`${BASE}/dictionary/${id}`, { method: "DELETE" });
   },
 
-  // Rewrite
-  async rewriteText(text: string, tone: string = "simple"): Promise<RewriteResponse> {
-    return fetchJSON<RewriteResponse>(`${BASE}/rewrite`, {
-      method: "POST",
-      body: JSON.stringify({ text, tone }),
-    });
-  },
-
-  // AI Style Analysis
-  async analyzeText(text: string): Promise<CheckResponse> {
-    return fetchJSON<CheckResponse>(`${BASE}/analyze`, {
+  // Fix — local spelling & grammar (nothing leaves this machine)
+  async fixText(text: string): Promise<FixResponse> {
+    return fetchJSON<FixResponse>(`${BASE}/fix`, {
       method: "POST",
       body: JSON.stringify({ text }),
     });
   },
 
-  // AI Multi-Version Correction
-  async correctText(text: string, numVersions: number = 3): Promise<CorrectResponse> {
-    return fetchJSON<CorrectResponse>(`${BASE}/analyze/correct`, {
+  // Rewrite — the user's own cloud AI provider, only on explicit request
+  async rewriteText(text: string, tone: string, instruction = ""): Promise<RewriteResponse> {
+    return fetchJSON<RewriteResponse>(`${BASE}/rewrite`, {
       method: "POST",
-      body: JSON.stringify({ text, num_versions: numVersions }),
+      body: JSON.stringify({ text, tone, instruction }),
     });
+  },
+
+  async getAiConfig(): Promise<AiConfig> {
+    return fetchJSON<AiConfig>(`${BASE}/ai/config`);
+  },
+
+  async updateAiConfig(data: {
+    provider?: string;
+    base_url?: string;
+    api_key?: string;
+    model?: string;
+    local_fix_ai?: boolean;
+  }): Promise<AiConfig> {
+    return fetchJSON<AiConfig>(`${BASE}/ai/config`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async listAiModels(): Promise<string[]> {
+    return fetchJSON<string[]>(`${BASE}/ai/models`);
   },
 
   // Backup

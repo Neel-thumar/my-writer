@@ -1,29 +1,23 @@
 # Editor
 
-TipTap editor setup and toolbar.
+The writing screen and everything that edits text.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `useWritingEditor.ts` | Hook that creates and configures the TipTap editor (StarterKit) |
-| `EditorToolbar.tsx` | Formatting buttons: bold, italic, headings (H1-H3), bullet list, ordered list, code block |
+| `EditorScreen.tsx` | One document's screen (mounted per doc id): loading, autosave, grammar check, Fix/Rewrite, header, status bar |
+| `useWritingEditor.ts` | Creates the TipTap editor: StarterKit, suggestion underlines, inline changes (Ctrl+E is Fix, so Code has no shortcut) |
+| `EditorToolbar.tsx` | Compact formatting row (undo/redo, headings, B/I/S, lists, quote) |
+| `inlineChanges.ts` | Tracked changes for Fix/Rewrite: apply a proposal word-by-word, accept/reject one or all (Tab / Esc) |
+| `diff.ts` | Word-level diff → replace hunks used by `inlineChanges` |
+| `ChangeReview.tsx` | Floating "N changes · Accept all · Reject all" bar and the per-change popover |
+| `RewriteMenu.tsx` | Rewrite picker: tones and a free-form instruction |
+| `suggestionHighlights.ts` | Wavy underlines for grammar suggestions; they follow edits and are clickable |
+| `positionMap.ts` | Map plain-text offsets from the checker to editor positions |
 
-## Features (Phase 1)
+## Layers of help
 
-- TipTap with StarterKit extension (headings, bold, italic, lists, code, blockquote)
-- Editable mode toggled when a document is selected
-- onUpdate callback triggers debounced autosave
-- Content loaded from document's TipTap JSON
-- Toolbar shows active formatting state (buttons highlight when format is active)
-
-## Phase 2 additions needed
-
-- Character count extension for accurate word count
-- Typography extension (smart quotes, dashes)
-- Potential: custom decoration for suggestion underlines
-
-## Latest updates
-
-- Phase 1: editor and toolbar complete
-- Phase 2: character count extension and typography improvements planned
+1. **While typing** (local): LanguageTool underlines issues; optional auto-correct of obvious typos.
+2. **Fix** (Ctrl+E, local): selection or current paragraph → `POST /api/fix` → inline changes.
+3. **Rewrite** (Ctrl+Shift+E, cloud, explicit only): `POST /api/rewrite` with the user's free provider → inline changes.

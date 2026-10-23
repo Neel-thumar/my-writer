@@ -3,9 +3,28 @@
 @tailwind utilities;
 
 /* Base typography for the editor */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply font-sans antialiased bg-ink-50 text-ink-800 dark:bg-ink-950 dark:text-ink-100;
+}
+
+::selection {
+  @apply bg-accent-200 dark:bg-accent-800;
+}
+
 .ProseMirror {
-  @apply font-serif text-ink-700 leading-[1.7];
-  min-height: 60vh;
+  @apply font-serif text-ink-700 leading-[1.75] text-[1.075rem];
+  min-height: 50vh;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  @apply text-ink-300 dark:text-ink-600 float-left h-0 pointer-events-none;
 }
 
 .ProseMirror:focus {
@@ -75,32 +94,6 @@
   @apply bg-ink-800;
 }
 
-/* Suggestion underline styles */
-.suggestion-underline {
-  background-image: linear-gradient(transparent 95%, currentColor 95%);
-  background-position: 0 100%;
-  background-repeat: repeat-x;
-  background-size: 6px 3px;
-  cursor: pointer;
-  padding-bottom: 1px;
-}
-
-.suggestion-underline.spelling {
-  color: theme("colors.suggestion.spelling");
-}
-
-.suggestion-underline.grammar {
-  color: theme("colors.suggestion.grammar");
-}
-
-.suggestion-underline.punctuation {
-  color: theme("colors.suggestion.punctuation");
-}
-
-.suggestion-underline.style {
-  color: theme("colors.suggestion.style");
-}
-
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -117,11 +110,6 @@
 
 .dark ::-webkit-scrollbar-thumb {
   @apply bg-ink-700;
-}
-
-/* Smooth transitions for focus mode */
-.focus-mode .library-sidebar {
-  @apply -translate-x-full opacity-0;
 }
 
 /* In-text suggestion underlines (click to open the suggestion) */
@@ -141,3 +129,31 @@
 .suggestion-grammar { text-decoration-color: #f59e0b; }
 .suggestion-punctuation { text-decoration-color: #a855f7; }
 .suggestion-style { text-decoration-color: #3b82f6; text-decoration-style: dotted; }
+
+/* Inline tracked changes from Fix / Rewrite (click one to accept or reject) */
+.change-insert {
+  @apply bg-emerald-100 text-emerald-900 rounded-sm cursor-pointer;
+  box-shadow: 0 1px 0 0 theme("colors.emerald.400");
+}
+.change-delete {
+  @apply text-red-500 line-through decoration-red-400/70 bg-red-50 rounded-sm mr-0.5 px-0.5 cursor-pointer select-none;
+}
+.dark .change-insert {
+  @apply bg-emerald-900/50 text-emerald-100;
+}
+.dark .change-delete {
+  @apply bg-red-950/40 text-red-400;
+}
+
+/* Drag handle for resizable panels */
+.resize-handle {
+  @apply w-1 shrink-0 cursor-col-resize bg-transparent hover:bg-accent-300 active:bg-accent-400 dark:hover:bg-accent-700 transition-colors;
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.animate-pop {
+  animation: pop-in 120ms ease-out;
+}

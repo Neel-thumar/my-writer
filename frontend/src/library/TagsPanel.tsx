@@ -66,19 +66,20 @@ export function TagsPanel({ docId, onTagsChanged }: TagsPanelProps) {
   );
 
   return (
-    <div className="flex items-center gap-1.5 flex-wrap px-6 py-1.5 border-b border-ink-100 dark:border-ink-800">
+    <div className="flex items-center gap-1.5 flex-wrap min-h-6">
       {/* Active tags */}
       {docTags.map((tag) => (
         <span
           key={tag.id}
-          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-ink-200 dark:bg-ink-700 text-ink-700 dark:text-ink-200"
+          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-accent-50 dark:bg-accent-950/50 text-accent-700 dark:text-accent-300"
         >
           #{tag.name}
           <button
             onClick={() => handleRemoveTag(tag.id)}
-            className="text-ink-400 hover:text-red-500"
+            className="text-accent-400 hover:text-red-500 cursor-pointer"
+            aria-label={`Remove tag ${tag.name}`}
           >
-            ✕
+            ×
           </button>
         </span>
       ))}
@@ -108,9 +109,9 @@ export function TagsPanel({ docId, onTagsChanged }: TagsPanelProps) {
       ) : (
         <button
           onClick={() => setShowTagInput(true)}
-          className="text-xs text-ink-400 hover:text-ink-600 dark:hover:text-ink-300"
+          className="text-xs text-ink-400 hover:text-ink-600 dark:hover:text-ink-300 cursor-pointer"
         >
-          + tag
+          {docTags.length ? "+" : "+ Add tag"}
         </button>
       )}
 

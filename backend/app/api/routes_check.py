@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.schemas import CheckRequest, CheckResponse
+from app.checkers.fixer import is_dictionary_word
 from app.checkers.languagetool import LanguageToolChecker
 from app.storage.database import get_db
 from app.storage.models import DictionaryWord, Setting
@@ -29,6 +30,10 @@ def _get_checker(db: Session) -> LanguageToolChecker:
     return _checker
 
 
+def dictionary_words(db: Session) -> set[str]:
+    return {w.word.lower() for w in db.query(DictionaryWord).all()}
+
+
 @router.post("", response_model=CheckResponse)
 def check_text(payload: CheckRequest, db: Session = Depends(get_db)):
     """Run grammar check on the provided text."""
@@ -42,19 +47,9 @@ def check_text(payload: CheckRequest, db: Session = Depends(get_db)):
 
         # Filter out spelling suggestions for words in the personal dictionary
         if suggestions:
-            dict_words = {
-                w.word.lower()
-                for w in db.query(DictionaryWord).all()
-            }
+            dict_words = dictionary_words(db)
             if dict_words:
-                suggestions = [
-                    s
-                    for s in suggestions
-                    if not (
-                        s.type == "spelling"
-                        and s.context.strip().lower() in dict_words
-                    )
-                ]
+                suggestions = [s for s in suggestions if not is_dictionary_word(s, dict_words)]
 
         return CheckResponse(suggestions=suggestions, language=payload.language)
     except Exception as exc:

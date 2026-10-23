@@ -1,11 +1,9 @@
 /**
  * Utility for mapping plain-text offsets (e.g. from LanguageTool / AI)
- * to ProseMirror document positions, and safely applying single or batch
- * text replacements.
+ * to ProseMirror document positions.
  */
 
 import type { Node as PMNode } from "@tiptap/pm/model";
-import type { EditorView } from "@tiptap/pm/view";
 import type { Suggestion } from "../types";
 
 export interface DocTextMapping {
@@ -103,59 +101,4 @@ export function resolveSuggestionRange(
   // Not found near where it was reported — better to do nothing than to
   // replace some unrelated occurrence elsewhere in the document.
   return null;
-}
-
-/**
- * Apply a single suggestion replacement to the editor view.
- */
-export function applySuggestionReplacement(
-  view: EditorView,
-  suggestion: Suggestion,
-  replacement: string,
-  mapping?: DocTextMapping | null,
-): boolean {
-  const range = resolveSuggestionRange(view.state.doc, suggestion, mapping);
-  if (!range) return false;
-
-  const tr = view.state.tr;
-  tr.insertText(replacement, range.from, range.to);
-  if (tr.docChanged) {
-    view.dispatch(tr);
-    return true;
-  }
-  return false;
-}
-
-/**
- * Apply multiple suggestions in one atomic transaction, sorted by offset descending
- * to avoid position shifting.
- */
-export function applyBatchSuggestions(
-  view: EditorView,
-  suggestionsWithReplacements: Array<{ suggestion: Suggestion; replacement: string }>,
-  mapping?: DocTextMapping | null,
-): number {
-  if (suggestionsWithReplacements.length === 0) return 0;
-
-  // Sort descending by offset so earlier positions remain valid
-  const sorted = [...suggestionsWithReplacements].sort(
-    (a, b) => b.suggestion.offset - a.suggestion.offset,
-  );
-
-  let appliedCount = 0;
-  const tr = view.state.tr;
-
-  for (const item of sorted) {
-    const range = resolveSuggestionRange(tr.doc, item.suggestion, mapping);
-    if (range) {
-      tr.insertText(item.replacement, range.from, range.to);
-      appliedCount++;
-    }
-  }
-
-  if (appliedCount > 0 && tr.docChanged) {
-    view.dispatch(tr);
-  }
-
-  return appliedCount;
 }

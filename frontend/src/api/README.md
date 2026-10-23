@@ -30,10 +30,11 @@ Typed fetch wrapper for the backend REST API.
 | `api.check(text)` | `POST /api/check` |
 | `api.exportDocument(id)` | `GET /api/export/{id}` (returns Blob) |
 | `api.importDocument(file)` | `POST /api/export/import` (multipart) |
-| `api.getSettings()` | `GET /api/settings` |
+| `api.listSettings()` | `GET /api/settings` (never includes the AI key) |
 | `api.upsertSetting(key, value)` | `PUT /api/settings` |
+| `api.fixText(text)` | `POST /api/fix` — local spelling & grammar fix |
+| `api.rewriteText(text, tone, instruction?)` | `POST /api/rewrite` — user's own free cloud provider |
+| `api.getAiConfig()` / `api.updateAiConfig(data)` | `GET/PUT /api/ai/config` (key is write-only) |
+| `api.listAiModels()` | `GET /api/ai/models` — models the saved key can use |
 
-## Latest updates
-
-- Phase 1: all CRUD, folder, tag, check, export/import, and settings methods implemented
-- Phase 2: version history methods needed (`getVersions`, `restoreVersion`)
+Errors throw `ApiError` with the server's readable `detail` message and `status`.

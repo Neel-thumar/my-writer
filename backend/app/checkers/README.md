@@ -1,30 +1,10 @@
 # Checkers
 
-Grammar checking adapters. The adapter pattern lets us swap engines without changing the API layer.
-
-## Files
+Text-checking and AI adapters, in layers.
 
 | File | Purpose |
 |------|---------|
-| `languagetool.py` | LanguageTool adapter — sends text to LanguageTool Docker container, normalizes response |
-
-## How it works
-
-1. Frontend sends plain text to `/api/check`
-2. `routes_check.py` calls the LanguageTool adapter
-3. Adapter POSTs to LanguageTool server (default: `http://localhost:8081`)
-4. Response is normalized into a standard suggestion format:
-   - `type`: spelling, grammar, punctuation, style
-   - `message`: description
-   - `context`: the text span flagged
-   - `replacements`: list of suggested fixes
-
-## Future
-
-- Phase 3: Ollama adapter for sentence rewriting and tone suggestions
-- The adapter pattern means we can add new checkers without touching the API layer
-
-## Latest updates
-
-- Phase 1: LanguageTool adapter complete
-- Phase 2: check category toggles (spelling/grammar/punctuation/style on/off) needed
+| `languagetool.py` | LanguageTool adapter (local Docker, port 8081). Offsets stay UTF-16 for the editor; `utf16_to_index` converts for Python slicing |
+| `fixer.py` | One-click Fix: apply LanguageTool's top fixes (skips names and dictionary words), then optionally a local-model grammar pass kept only if it adds no new issues |
+| `local_llm.py` | Small local GGUF model (llama-cpp). One lock around every call (llama.cpp aborts the process on concurrent use); rejects edits that change too much |
+| `cloud_ai.py` | Rewrite through any OpenAI-compatible API (Groq, Gemini, OpenRouter free tiers, or a custom URL) using the user's own key |

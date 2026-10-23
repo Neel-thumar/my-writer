@@ -182,6 +182,16 @@ def test_version_history(client):
     assert len(resp3.json()) == 2
 
 
+def test_move_document_between_folders(client):
+    folder_id = client.post("/api/folders", json={"name": "Essays"}).json()["id"]
+    doc_id = client.post("/api/documents", json={"title": "Draft"}).json()["id"]
+    assert client.put(f"/api/documents/{doc_id}", json={"folder_id": folder_id}).json()["folder_id"] == folder_id
+    # Updating something else leaves the folder alone
+    assert client.put(f"/api/documents/{doc_id}", json={"title": "Draft 2"}).json()["folder_id"] == folder_id
+    # Explicit null moves it back to the top level
+    assert client.put(f"/api/documents/{doc_id}", json={"folder_id": None}).json()["folder_id"] is None
+
+
 def test_tags(client):
     # Create tag
     resp = client.post("/api/tags", json={"name": "essay"})
@@ -221,8 +231,77 @@ def test_settings(client):
     assert resp.status_code == 204
 
 
-def test_correct_text_validation(client):
-    # Empty text should return 400
-    resp = client.post("/api/analyze/correct", json={"text": ""})
+def test_fix_validation(client):
+    resp = client.post("/api/fix", json={"text": "  "})
     assert resp.status_code == 400
+
+
+def test_rewrite_needs_provider_setup(client):
+    resp = client.post("/api/rewrite", json={"text": "Hello there."})
+    assert resp.status_code == 409
+    assert "Settings" in resp.json()["detail"]
+
+
+def test_ai_key_is_never_returned(client):
+    resp = client.put("/api/ai/config", json={"provider": "groq", "api_key": "secret-123"})
+    assert resp.status_code == 200
+    cfg = resp.json()
+    assert cfg["has_api_key"] is True
+    assert cfg["base_url"] == "https://api.groq.com/openai/v1"
+    assert "secret-123" not in resp.text
+    assert "secret-123" not in client.get("/api/ai/config").text
+    assert "secret-123" not in client.get("/api/settings").text
+    assert client.get("/api/settings/ai_api_key").status_code == 404
+
+    # Clearing the key
+    cfg = client.put("/api/ai/config", json={"api_key": ""}).json()
+    assert cfg["has_api_key"] is False
+
+
+def _suggestion(text, word, replacement, type_="spelling", nth=0):
+    from app.api.schemas import Suggestion, SuggestionReplacement
+
+    idx = -1
+    for _ in range(nth + 1):
+        idx = text.index(word, idx + 1)
+    return Suggestion(
+        id="t", type=type_, message="m", offset=idx, length=len(word), context=text,
+        error_text=word, replacements=[SuggestionReplacement(value=replacement, message=None)],
+        category_id="TYPOS",
+    )
+
+
+def test_apply_languagetool_fixes():
+    from app.checkers.fixer import apply_languagetool_fixes
+
+    text = "Neel seen teh dog. Then Neel went home and teh cat slept."
+    sugs = [
+        _suggestion(text, "teh", "the"),
+        _suggestion(text, "teh", "the", nth=1),
+        _suggestion(text, "seen", "saw", type_="grammar"),
+        _suggestion(text, "Neel", "Need"),  # names are left alone, even at sentence start
+        _suggestion(text, "Neel", "Need", nth=1),
+    ]
+    fixed, count = apply_languagetool_fixes(text, sugs, dictionary=set())
+    assert fixed == "Neel saw the dog. Then Neel went home and the cat slept."
+    assert count == 3
+
+    # Personal dictionary words are never "fixed"
+    fixed, _ = apply_languagetool_fixes("teh", [_suggestion("teh", "teh", "the")], dictionary={"teh"})
+    assert fixed == "teh"
+
+
+def test_utf16_offsets_with_emoji():
+    from app.checkers.languagetool import utf16_to_index
+
+    text = "Hi 😀 teh"
+    # LanguageTool/JS count the emoji as 2 units, so "teh" starts at 6, not 5
+    assert text[utf16_to_index(text, 6):utf16_to_index(text, 9)] == "teh"
+
+
+def test_local_fix_guard_rejects_rewrites():
+    from app.checkers.local_llm import _is_minimal_edit
+
+    assert _is_minimal_edit("He go to school yesterday.", "He went to school yesterday.")
+    assert not _is_minimal_edit("He go to school yesterday.", "Yesterday, the student attended his classes at the academy.")
 

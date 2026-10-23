@@ -11,7 +11,10 @@ FastAPI route handlers for all backend endpoints.
 | `routes_tags.py` | Tag creation, listing, assigning tags to documents |
 | `routes_check.py` | Grammar check endpoint (proxies to LanguageTool) |
 | `routes_export.py` | .docx export and import endpoints |
-| `routes_settings.py` | Key-value settings store (theme, font, language) |
+| `routes_settings.py` | Key-value settings store (secret keys such as `ai_api_key` are never returned) |
+| `routes_ai.py` | `POST /fix` (local), `POST /rewrite` (cloud, explicit), `GET/PUT /ai/config`, `GET /ai/models` |
+| `routes_dictionary.py` | Personal dictionary words |
+| `routes_backup.py` | Export all documents as .docx into a folder |
 | `schemas.py` | Pydantic v2 request/response models |
 
 ## Patterns

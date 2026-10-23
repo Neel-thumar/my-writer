@@ -6,7 +6,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": "http://localhost:8000",
+      // API_TARGET lets a second copy of the app run against another backend
+      "/api": process.env.API_TARGET ?? "http://localhost:8000",
     },
   },
 });

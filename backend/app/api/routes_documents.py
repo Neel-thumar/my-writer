@@ -107,7 +107,8 @@ def update_document(doc_id: int, payload: DocumentUpdate, db: Session = Depends(
     if payload.title is not None:
         doc.title = payload.title
         changed = True
-    if payload.folder_id is not None:
+    if "folder_id" in payload.model_fields_set:
+        # Explicit null moves the document back to the top level
         doc.folder_id = payload.folder_id
         changed = True
     if payload.content is not None:

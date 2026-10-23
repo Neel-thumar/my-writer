@@ -73,7 +73,7 @@ export function SuggestionPopup({ suggestion, anchorRect }: SuggestionPopupProps
   return (
     <div
       ref={popupRef}
-      className={`fixed z-50 w-84 bg-white dark:bg-ink-900 rounded-xl shadow-2xl border border-ink-200 dark:border-ink-700 p-4 border-l-4 ${currentType.border} animate-in fade-in zoom-in-95 duration-100`}
+      className={`fixed z-50 w-80 bg-white dark:bg-ink-900 rounded-xl shadow-2xl border border-ink-200 dark:border-ink-700 p-4 border-l-4 ${currentType.border} animate-in fade-in zoom-in-95 duration-100`}
       style={{ top, left }}
     >
       {/* Header with Type & Dismiss '×' */}
