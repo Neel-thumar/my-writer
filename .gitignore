@@ -42,3 +42,6 @@ Thumbs.db
 
 # Start script runtime data
 .run/
+
+# Claude local rules
+CLAUDE.md
