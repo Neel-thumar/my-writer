@@ -53,6 +53,7 @@ class DocumentUpdate(BaseModel):
     title: str | None = None
     content: dict[str, Any] | None = None
     folder_id: int | None = None
+    create_version: bool = False
 
 
 class DocumentOut(BaseModel):
@@ -121,6 +122,7 @@ class Suggestion(BaseModel):
     offset: int
     length: int
     context: str
+    error_text: str | None = None
     replacements: list[SuggestionReplacement] = []
     category_id: str | None = None
 
@@ -128,6 +130,17 @@ class Suggestion(BaseModel):
 class CheckResponse(BaseModel):
     suggestions: list[Suggestion]
     language: str
+
+
+class CorrectVersion(BaseModel):
+    title: str
+    description: str
+    text: str
+
+
+class CorrectResponse(BaseModel):
+    original: str
+    versions: list[CorrectVersion]
 
 
 # ---------------------------------------------------------------------------

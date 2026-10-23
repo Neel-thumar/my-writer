@@ -40,6 +40,7 @@ export interface Suggestion {
   offset: number;
   length: number;
   context: string;
+  error_text?: string;
   replacements: SuggestionReplacement[];
   category_id: string | null;
 }
@@ -67,4 +68,15 @@ export interface RewriteResponse {
 
 export interface AnalyzeRequest {
   text: string;
+}
+
+export interface CorrectVersion {
+  title: string;
+  description: string;
+  text: string;
+}
+
+export interface CorrectResponse {
+  original: string;
+  versions: CorrectVersion[];
 }

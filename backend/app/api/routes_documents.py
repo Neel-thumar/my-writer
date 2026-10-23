@@ -111,11 +111,21 @@ def update_document(doc_id: int, payload: DocumentUpdate, db: Session = Depends(
         doc.folder_id = payload.folder_id
         changed = True
     if payload.content is not None:
-        # Save a version snapshot before overwriting
-        version = Version(document_id=doc.id, content=doc.content)
-        db.add(version)
         doc.set_content(payload.content)
         changed = True
+    # Only manual saves (Ctrl+S) snapshot into version history; autosave never does.
+    # The snapshot holds the content just saved, and identical consecutive
+    # snapshots are skipped so repeated Ctrl+S doesn't clutter the history.
+    if payload.create_version:
+        latest = (
+            db.query(Version)
+            .filter(Version.document_id == doc.id)
+            .order_by(desc(Version.saved_at), desc(Version.id))
+            .first()
+        )
+        if latest is None or latest.content != doc.content:
+            db.add(Version(document_id=doc.id, content=doc.content))
+            changed = True
     if changed:
         doc.updated_at = datetime.now(timezone.utc)
         db.commit()
@@ -200,6 +210,19 @@ def list_versions(doc_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Document not found")
     versions = db.query(Version).filter(Version.document_id == doc_id).order_by(desc(Version.saved_at)).all()
     return versions
+
+
+@router.post("/{doc_id}/versions", response_model=VersionOut)
+def create_version_snapshot(doc_id: int, db: Session = Depends(get_db)):
+    """Create a manual version snapshot (e.g. from Ctrl+S)."""
+    doc = db.get(Document, doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    version = Version(document_id=doc.id, content=doc.content)
+    db.add(version)
+    db.commit()
+    db.refresh(version)
+    return version
 
 
 @router.get("/{doc_id}/versions/{version_id}")

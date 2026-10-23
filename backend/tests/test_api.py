@@ -5,17 +5,40 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
 from app.main import app
-from app.storage.database import engine, Base, SessionLocal
+from app.storage.database import Base, get_db
+
+TEST_DATABASE_URL = "sqlite:///:memory:"
+
+test_engine = create_engine(
+    TEST_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 
 @pytest.fixture()
 def client():
-    """Create a fresh test client with clean DB."""
-    Base.metadata.create_all(bind=engine)
+    """Create a fresh test client with an isolated in-memory DB."""
+    Base.metadata.create_all(bind=test_engine)
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
         yield c
-    Base.metadata.drop_all(bind=engine)
+    Base.metadata.drop_all(bind=test_engine)
+    app.dependency_overrides.clear()
 
 
 def test_create_and_get_document(client):
@@ -130,16 +153,33 @@ def test_version_history(client):
     resp = client.post("/api/documents", json={"title": "Versioned"})
     doc_id = resp.json()["id"]
 
-    # Save initial content
+    # Autosave content — should NOT create a version snapshot
     client.put(f"/api/documents/{doc_id}", json={"content": {"type": "doc", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "v1"}]}]}})
-    # Save updated content — this creates a version snapshot
-    client.put(f"/api/documents/{doc_id}", json={"content": {"type": "doc", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "v2"}]}]}})
+    resp = client.get(f"/api/documents/{doc_id}/versions")
+    assert resp.status_code == 200
+    assert len(resp.json()) == 0
+
+    # Manual save (Ctrl+S / create_version=True) — should create a version snapshot
+    client.put(f"/api/documents/{doc_id}", json={"content": {"type": "doc", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "v2"}]}]}, "create_version": True})
 
     # List versions
     resp = client.get(f"/api/documents/{doc_id}/versions")
     assert resp.status_code == 200
     versions = resp.json()
-    assert len(versions) >= 1
+    assert len(versions) == 1
+    # The snapshot holds the content that was just saved, not the previous one
+    snap = client.get(f"/api/documents/{doc_id}/versions/{versions[0]['id']}").json()
+    assert snap["content"]["content"][0]["content"][0]["text"] == "v2"
+
+    # Pressing Ctrl+S again with no changes doesn't add a duplicate snapshot
+    client.put(f"/api/documents/{doc_id}", json={"content": {"type": "doc", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "v2"}]}]}, "create_version": True})
+    assert len(client.get(f"/api/documents/{doc_id}/versions").json()) == 1
+
+    # POST /api/documents/{doc_id}/versions snapshot endpoint
+    resp2 = client.post(f"/api/documents/{doc_id}/versions")
+    assert resp2.status_code == 200
+    resp3 = client.get(f"/api/documents/{doc_id}/versions")
+    assert len(resp3.json()) == 2
 
 
 def test_tags(client):
@@ -179,3 +219,10 @@ def test_settings(client):
     # Delete
     resp = client.delete("/api/settings/theme")
     assert resp.status_code == 204
+
+
+def test_correct_text_validation(client):
+    # Empty text should return 400
+    resp = client.post("/api/analyze/correct", json={"text": ""})
+    assert resp.status_code == 400
+

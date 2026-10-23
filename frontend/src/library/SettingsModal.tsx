@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { DictionaryWord } from "../types";
+import { useSuggestions } from "../suggestions/SuggestionsProvider";
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -40,6 +41,7 @@ export function SettingsModal({
   backupPath,
   onSetBackupPath,
 }: SettingsModalProps) {
+  const { ignoredCount, resetIgnored } = useSuggestions();
   const [words, setWords] = useState<DictionaryWord[]>([]);
   const [newWord, setNewWord] = useState("");
   const [backupInput, setBackupInput] = useState(backupPath);
@@ -155,6 +157,29 @@ export function SettingsModal({
                 Enable AI style analysis
               </span>
             </label>
+          </div>
+
+          {/* Ignored suggestions */}
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-400 mb-3">
+              Ignored Suggestions
+            </h3>
+            <p className="text-xs text-ink-400 mb-3">
+              Suggestions you ignore stay hidden. Reset to see them again on the next check.
+            </p>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-ink-600 dark:text-ink-300">
+                {ignoredCount} ignored
+              </span>
+              <button
+                type="button"
+                onClick={resetIgnored}
+                disabled={ignoredCount === 0}
+                className="px-3 py-1 text-xs rounded bg-ink-100 hover:bg-ink-200 dark:bg-ink-800 dark:hover:bg-ink-700 text-ink-700 dark:text-ink-300 font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Reset ignored suggestions
+              </button>
+            </div>
           </div>
 
           {/* Personal dictionary */}

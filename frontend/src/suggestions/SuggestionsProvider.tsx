@@ -9,23 +9,33 @@ import {
 import type { Suggestion } from "../types";
 import { api } from "../api/client";
 
+type AcceptItem = { suggestion: Suggestion; replacement: string };
+
 interface SuggestionsContextValue {
   suggestions: Suggestion[];
   checking: boolean;
-  /** Run a grammar check on the given plain text */
-  checkText: (text: string, categories?: string[]) => Promise<void>;
-  /** Run AI style analysis and merge results with existing suggestions */
-  analyzeText: (text: string) => Promise<void>;
-  /** Run both grammar check and AI analysis */
-  checkAll: (text: string, categories?: string[], aiEnabled?: boolean) => Promise<void>;
-  /** Clear all suggestions */
+  /**
+   * Run grammar check (and optionally AI analysis) on plain text.
+   * Grammar results show immediately; AI results merge in when ready.
+   * Resolves with the grammar suggestions, or null if a newer check superseded this one.
+   */
+  checkAll: (text: string, categories?: string[], aiEnabled?: boolean) => Promise<Suggestion[] | null>;
+  /** Drop all suggestions without ignoring them (e.g. when switching documents) */
   clear: () => void;
-  /** Accept a suggestion — replaces text (handled by editor) */
-  acceptSuggestion: (suggestion: Suggestion, replacement: string) => void;
-  /** Dismiss a suggestion */
+  /** Ignore every current suggestion — they won't come back on the next check */
+  dismissAll: () => void;
+  /** Ignore one suggestion — it (and identical ones) won't come back on the next check */
   dismissSuggestion: (id: string) => void;
-  /** Register a handler for when a suggestion is accepted */
+  /** How many issues are currently ignored */
+  ignoredCount: number;
+  /** Forget all ignored issues so they can be suggested again */
+  resetIgnored: () => void;
+  /** Apply a suggestion's replacement (via the editor handler) and remove it */
+  acceptSuggestion: (suggestion: Suggestion, replacement: string) => void;
+  /** Apply several suggestions at once; returns how many were applied */
+  acceptBatchSuggestions: (items: AcceptItem[]) => number;
   setAcceptHandler: (fn: (suggestion: Suggestion, replacement: string) => void) => void;
+  setBatchAcceptHandler: (fn: (items: AcceptItem[]) => number) => void;
   /** Active suggestion (for popup display) */
   activeSuggestion: Suggestion | null;
   setActiveSuggestion: (s: Suggestion | null) => void;
@@ -33,116 +43,140 @@ interface SuggestionsContextValue {
 
 const SuggestionsContext = createContext<SuggestionsContextValue | null>(null);
 
+const IGNORED_STORAGE_KEY = "ignoredSuggestions";
+const MAX_IGNORED = 500;
+
+/** Identifies "the same issue" across checks, independent of position. */
+function ignoreKey(s: Suggestion): string {
+  return `${s.category_id ?? s.type}|${s.error_text ?? s.context}|${s.message}`;
+}
+
+function loadIgnored(): Set<string> {
+  try {
+    const raw = localStorage.getItem(IGNORED_STORAGE_KEY);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveIgnored(keys: Set<string>) {
+  try {
+    localStorage.setItem(IGNORED_STORAGE_KEY, JSON.stringify([...keys].slice(-MAX_IGNORED)));
+  } catch {
+    // storage unavailable — ignoring still works for this session
+  }
+}
+
 export function SuggestionsProvider({ children }: { children: ReactNode }) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [checking, setChecking] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState<Suggestion | null>(null);
-  const acceptHandlerRef = useRef<
-    ((suggestion: Suggestion, replacement: string) => void) | null
-  >(null);
-  const checkTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const acceptHandlerRef = useRef<((suggestion: Suggestion, replacement: string) => void) | null>(null);
+  const batchAcceptHandlerRef = useRef<((items: AcceptItem[]) => number) | null>(null);
+  const ignoredRef = useRef<Set<string>>(loadIgnored());
+  const [ignoredCount, setIgnoredCount] = useState(() => ignoredRef.current.size);
+  const checkSeqRef = useRef(0);
 
-  const checkText = useCallback(async (text: string, categories?: string[]) => {
-    if (!text || !text.trim()) {
-      setSuggestions([]);
-      return;
-    }
-    setChecking(true);
-    try {
-      const resp = await api.checkText(text, "en-US", categories);
-      setSuggestions(resp.suggestions);
-    } catch (err) {
-      // If LanguageTool is not running, silently clear suggestions
-      console.warn("Grammar check failed:", err);
-      setSuggestions([]);
-    } finally {
-      setChecking(false);
-    }
+  const ignore = useCallback((items: Suggestion[]) => {
+    for (const s of items) ignoredRef.current.add(ignoreKey(s));
+    saveIgnored(ignoredRef.current);
+    setIgnoredCount(ignoredRef.current.size);
   }, []);
 
-  const analyzeText = useCallback(async (text: string) => {
-    if (!text || !text.trim()) return;
-    setChecking(true);
-    try {
-      const aiResp = await api.analyzeText(text);
-      // Merge AI suggestions with existing grammar suggestions (avoid dupes by id)
-      setSuggestions((prev) => {
-        const existingIds = new Set(prev.map((s) => s.id));
-        const aiOnly = aiResp.suggestions.filter((s) => !existingIds.has(s.id));
-        return [...prev, ...aiOnly];
-      });
-    } catch (err) {
-      console.warn("AI analysis failed:", err);
-    } finally {
-      setChecking(false);
-    }
+  const resetIgnored = useCallback(() => {
+    ignoredRef.current = new Set();
+    saveIgnored(ignoredRef.current);
+    setIgnoredCount(0);
   }, []);
 
-  const checkAll = useCallback(async (text: string, categories?: string[], aiEnabled?: boolean) => {
-    if (!text || !text.trim()) {
-      setSuggestions([]);
-      return;
-    }
-    setChecking(true);
-    const tasks: Promise<void>[] = [];
+  const checkAll = useCallback(
+    async (text: string, categories?: string[], aiEnabled?: boolean): Promise<Suggestion[] | null> => {
+      const seq = ++checkSeqRef.current;
+      const isLatest = () => seq === checkSeqRef.current;
+      // Prefix ids with the check number so ids never collide across checks
+      const prepare = (list: Suggestion[]) =>
+        list
+          .filter((s) => !ignoredRef.current.has(ignoreKey(s)))
+          .map((s) => ({ ...s, id: `${seq}:${s.id}` }));
 
-    // Grammar check
-    tasks.push(
-      (async () => {
-        try {
-          const resp = await api.checkText(text, "en-US", categories);
-          setSuggestions((prev) => {
-            // Remove old non-AI suggestions, keep AI ones
-            const ai = prev.filter((s) => s.id.startsWith("ai-"));
-            return [...resp.suggestions, ...ai];
-          });
-        } catch (err) {
-          console.warn("Grammar check failed:", err);
-        }
-      })(),
-    );
-
-    // AI analysis (if enabled)
-    if (aiEnabled) {
-      tasks.push(
-        (async () => {
-          try {
-            const aiResp = await api.analyzeText(text);
-            setSuggestions((prev) => {
-              // Remove old AI suggestions, keep grammar ones
-              const grammar = prev.filter((s) => !s.id.startsWith("ai-"));
-              return [...grammar, ...aiResp.suggestions];
-            });
-          } catch (err) {
-            console.warn("AI analysis failed:", err);
-          }
-        })(),
-      );
-    } else {
-      // Remove any existing AI suggestions
-      setSuggestions((prev) => prev.filter((s) => !s.id.startsWith("ai-")));
-    }
-
-    await Promise.allSettled(tasks);
-    setChecking(false);
-  }, []);
-
-  const clear = useCallback(() => setSuggestions([]), []);
-
-  const acceptSuggestion = useCallback(
-    (suggestion: Suggestion, replacement: string) => {
-      if (acceptHandlerRef.current) {
-        acceptHandlerRef.current(suggestion, replacement);
+      if (!text.trim()) {
+        setSuggestions([]);
+        setActiveSuggestion(null);
+        return [];
       }
-      setSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id));
-      setActiveSuggestion(null);
+
+      setChecking(true);
+      let grammar: Suggestion[] = [];
+      try {
+        grammar = prepare((await api.checkText(text, "en-US", categories)).suggestions);
+      } catch (err) {
+        console.warn("Grammar check failed:", err);
+      }
+      if (!isLatest()) return null;
+      setSuggestions(grammar);
+      setActiveSuggestion((cur) => (cur && grammar.some((s) => s.id === cur.id) ? cur : null));
+
+      if (aiEnabled) {
+        api
+          .analyzeText(text)
+          .then((resp) => {
+            if (isLatest()) setSuggestions((prev) => [...prev, ...prepare(resp.suggestions)]);
+          })
+          .catch((err) => console.warn("AI analysis failed:", err))
+          .finally(() => {
+            if (isLatest()) setChecking(false);
+          });
+      } else {
+        setChecking(false);
+      }
+      return grammar;
     },
     [],
   );
 
-  const dismissSuggestion = useCallback((id: string) => {
-    setSuggestions((prev) => prev.filter((s) => s.id !== id));
+  const clear = useCallback(() => {
+    checkSeqRef.current++; // discard any in-flight check
+    setSuggestions([]);
     setActiveSuggestion(null);
+    setChecking(false);
+  }, []);
+
+  const dismissAll = useCallback(() => {
+    setSuggestions((prev) => {
+      ignore(prev);
+      return [];
+    });
+    setActiveSuggestion(null);
+  }, [ignore]);
+
+  const dismissSuggestion = useCallback(
+    (id: string) => {
+      setSuggestions((prev) => {
+        const target = prev.find((s) => s.id === id);
+        if (!target) return prev;
+        ignore([target]);
+        const key = ignoreKey(target);
+        return prev.filter((s) => ignoreKey(s) !== key);
+      });
+      setActiveSuggestion(null);
+    },
+    [ignore],
+  );
+
+  const acceptSuggestion = useCallback((suggestion: Suggestion, replacement: string) => {
+    acceptHandlerRef.current?.(suggestion, replacement);
+    setSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id));
+    setActiveSuggestion(null);
+  }, []);
+
+  const acceptBatchSuggestions = useCallback((items: AcceptItem[]) => {
+    if (items.length === 0) return 0;
+    const applied = batchAcceptHandlerRef.current?.(items) ?? 0;
+    const appliedIds = new Set(items.map((it) => it.suggestion.id));
+    setSuggestions((prev) => prev.filter((s) => !appliedIds.has(s.id)));
+    setActiveSuggestion(null);
+    return applied;
   }, []);
 
   const setAcceptHandler = useCallback(
@@ -152,18 +186,25 @@ export function SuggestionsProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const setBatchAcceptHandler = useCallback((fn: (items: AcceptItem[]) => number) => {
+    batchAcceptHandlerRef.current = fn;
+  }, []);
+
   return (
     <SuggestionsContext.Provider
       value={{
         suggestions,
         checking,
-        checkText,
-        analyzeText,
         checkAll,
         clear,
-        acceptSuggestion,
+        dismissAll,
         dismissSuggestion,
+        ignoredCount,
+        resetIgnored,
+        acceptSuggestion,
+        acceptBatchSuggestions,
         setAcceptHandler,
+        setBatchAcceptHandler,
         activeSuggestion,
         setActiveSuggestion,
       }}

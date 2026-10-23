@@ -100,6 +100,12 @@
 | AI style suggestions | ✅ POST /api/analyze endpoint using LLM; SuggestionsProvider runs grammar + AI in parallel; toggle in Settings |
 | Folder backup | ✅ POST /api/backup exports all docs as .docx into timestamped subfolder; GET/PUT /api/backup/path for config; Settings UI |
 | Tauri desktop wrapper | ⬜ Deferred (skipped per user request) |
+| AI Correct (3 versions) | ✅ POST /api/analyze/correct + AiCorrectModal (Ctrl+Shift+C) — pick Standard / Polished / Concise |
+| Auto-correct mode | ✅ Toggle; auto-applies spelling/punctuation fixes, never on the word under the cursor |
+| In-text suggestion underlines | ✅ Wavy underlines per type, follow edits, click to open; Esc/click-away just closes |
+| Ignore suggestions | ✅ ✕ / Ignore / Ignore all — ignored issues don't come back on re-check (stored in localStorage); "Reset ignored suggestions" in Settings |
+| Autosave vs. version history | ✅ Autosave never snapshots; Ctrl+S snapshots the saved content (identical snapshots skipped) |
+| Reopen last doc on restart | ✅ Fixed: editor was left empty on startup (and could autosave over the doc) |
 
 ---
 

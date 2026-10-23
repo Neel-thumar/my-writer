@@ -98,13 +98,18 @@ class LanguageToolChecker:
                 for r in match.get("replacements", [])
             ]
 
+            offset = match.get("offset", 0)
+            length = match.get("length", match.get("errorLength", 0))
+            error_text = text[offset : offset + length] if 0 <= offset and offset + length <= len(text) else ""
+
             suggestion = Suggestion(
                 id=f"lt-{i}",
                 type=suggestion_type,
                 message=match.get("message", ""),
-                offset=match.get("offset", 0),
-                length=match.get("errorLength", 0),
+                offset=offset,
+                length=length,
                 context=match.get("context", {}).get("text", ""),
+                error_text=error_text,
                 replacements=replacements,
                 category_id=category_id,
             )

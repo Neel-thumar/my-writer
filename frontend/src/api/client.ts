@@ -5,6 +5,7 @@
 
 import type {
   CheckResponse,
+  CorrectResponse,
   Document,
   DictionaryWord,
   Folder,
@@ -75,11 +76,28 @@ export const api = {
       title?: string;
       content?: Record<string, unknown>;
       folder_id?: number | null;
+      create_version?: boolean;
     },
   ): Promise<Document> {
     return fetchJSON<Document>(`${BASE}/documents/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
+    });
+  },
+
+  /** Fire-and-forget save that survives the page closing (keepalive). */
+  saveDocumentOnExit(id: number, data: { title?: string; content?: Record<string, unknown> }) {
+    fetch(`${BASE}/documents/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+      keepalive: true,
+    }).catch(() => {});
+  },
+
+  async createVersion(docId: number): Promise<Version> {
+    return fetchJSON<Version>(`${BASE}/documents/${docId}/versions`, {
+      method: "POST",
     });
   },
 
@@ -259,6 +277,14 @@ export const api = {
     return fetchJSON<CheckResponse>(`${BASE}/analyze`, {
       method: "POST",
       body: JSON.stringify({ text }),
+    });
+  },
+
+  // AI Multi-Version Correction
+  async correctText(text: string, numVersions: number = 3): Promise<CorrectResponse> {
+    return fetchJSON<CorrectResponse>(`${BASE}/analyze/correct`, {
+      method: "POST",
+      body: JSON.stringify({ text, num_versions: numVersions }),
     });
   },
 

@@ -123,3 +123,21 @@
 .focus-mode .library-sidebar {
   @apply -translate-x-full opacity-0;
 }
+
+/* In-text suggestion underlines (click to open the suggestion) */
+.suggestion-mark {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background-color 120ms ease;
+}
+.suggestion-mark:hover {
+  background-color: rgb(127 127 127 / 0.12);
+}
+.suggestion-spelling { text-decoration-color: #ef4444; }
+.suggestion-grammar { text-decoration-color: #f59e0b; }
+.suggestion-punctuation { text-decoration-color: #a855f7; }
+.suggestion-style { text-decoration-color: #3b82f6; text-decoration-style: dotted; }

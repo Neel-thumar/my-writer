@@ -118,6 +118,76 @@ class OllamaRewriter:
         """Check if the model file exists."""
         return Path(self._model_path).exists()
 
+    _CORRECTION_STYLES = [
+        {
+            "title": "Standard Correction",
+            "description": "Fixes spelling, grammar, and punctuation while preserving your voice.",
+            "instruction": "You are a professional copy editor. Fix all grammar, spelling, and punctuation errors. Preserve original wording where correct. Output ONLY the final corrected text without any notes, explanations, or quotes.",
+            "temperature": 0.2,
+        },
+        {
+            "title": "Polished & Fluent",
+            "description": "Fixes errors and refines phrasing for smooth, natural flow.",
+            "instruction": "You are a professional editor. Fix all errors and improve phrasing so the text reads smoothly and naturally. Output ONLY the final corrected text without any notes, explanations, or quotes.",
+            "temperature": 0.4,
+        },
+        {
+            "title": "Crisp & Concise",
+            "description": "Fixes errors and eliminates wordiness, making writing direct.",
+            "instruction": "You are a professional editor. Fix all errors and remove wordiness or unnecessary filler, making the text crisp, clear, and direct. Output ONLY the final corrected text without any notes, explanations, or quotes.",
+            "temperature": 0.3,
+        },
+    ]
+
+    def correct(self, text: str, num_versions: int = 3) -> list[dict[str, str]]:
+        """Generate multiple corrected versions of the text.
+
+        Args:
+            text: The text to correct.
+            num_versions: How many corrected versions to generate (1-3).
+
+        Returns:
+            A list of dicts with title, description, and text.
+        """
+        if not text or not text.strip():
+            return []
+
+        num_versions = max(1, min(3, num_versions))
+        results: list[dict[str, str]] = []
+
+        llm = self._get_llm()
+        for i in range(num_versions):
+            style = self._CORRECTION_STYLES[i % len(self._CORRECTION_STYLES)]
+            prompt = (
+                f"<|im_start|>system\n{style['instruction']}<|im_end|>\n"
+                f"<|im_start|>user\n{text}<|im_end|>\n"
+                f"<|im_start|>assistant\n"
+            )
+            try:
+                resp = llm(
+                    prompt,
+                    max_tokens=max(100, min(800, len(text.split()) * 3)),
+                    temperature=style["temperature"],
+                    top_p=0.9,
+                    stop=["<|im_end|>", "<|endoftext|>", "</s>", "\n\n\n"],
+                )
+                corrected = resp["choices"][0]["text"].strip()
+                # Clean up any surrounding quotes or accidental prefixes
+                corrected = corrected.strip('"').strip("'")
+                if corrected.startswith("Corrected:"):
+                    corrected = corrected[len("Corrected:"):].strip()
+
+                if corrected:
+                    results.append({
+                        "title": style["title"],
+                        "description": style["description"],
+                        "text": corrected,
+                    })
+            except Exception as exc:
+                logger.error("LLM correct error (version %d): %s", i, exc)
+
+        return results
+
     def analyze(self, text: str) -> list[dict[str, Any]]:
         """Analyze text and return style suggestions.
 
